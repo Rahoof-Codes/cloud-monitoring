@@ -36,6 +36,7 @@ export function MobileSections({
   const {
     resources,
     abnormal,
+    alerts,
     files,
     totalStorageUsedBytes,
     setIsAiOpen,
@@ -65,7 +66,7 @@ export function MobileSections({
             <span>Resources</span>
             <span
               className={`ml-0.5 rounded-full px-1.5 py-0.2 text-[10px] font-bold ${
-                abnormal.length > 0
+                alerts.length > 0
                   ? "bg-rose-500/15 text-rose-500"
                   : "bg-muted text-muted-foreground"
               }`}
@@ -141,14 +142,14 @@ export function MobileSections({
                 </span>
                 <AlertTriangle
                   className={`h-3.5 w-3.5 ${
-                    abnormal.length > 0 ? "text-amber-500" : "text-emerald-500"
+                    alerts.length > 0 ? "text-amber-500" : "text-emerald-500"
                   }`}
                 />
               </div>
               <p className="mt-1 text-xl font-bold tracking-tight text-foreground">
-                {abnormal.length}
+                {alerts.length}
                 <span className="text-xs font-normal text-muted-foreground ml-1">
-                  {abnormal.length > 0 ? "high CPU" : "healthy"}
+                  {alerts.length > 0 ? "active" : "healthy"}
                 </span>
               </p>
               <p className="text-[10px] text-muted-foreground">
@@ -312,7 +313,7 @@ export function MobileSections({
           >
             <div className="relative">
               <Server className="h-5 w-5" />
-              {abnormal.length > 0 && (
+              {alerts.length > 0 && (
                 <span className="absolute -top-0.5 -right-0.5 h-2 w-2 rounded-full bg-rose-500 animate-pulse" />
               )}
             </div>

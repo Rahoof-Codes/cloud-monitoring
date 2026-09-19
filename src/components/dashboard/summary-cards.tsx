@@ -26,7 +26,7 @@ export function SummaryCards() {
     resources,
     resourcesLoading,
     totalStorageUsedBytes,
-    abnormal,
+    alerts,
   } = useDashboard();
 
   if (resourcesLoading) {
@@ -78,12 +78,12 @@ export function SummaryCards() {
     },
     {
       label: "Active Alerts",
-      value: abnormal.length,
+      value: alerts.length,
       icon: <AlertTriangle className="h-4 w-4" />,
-      subtitle: abnormal.length > 0 ? "Needs review" : "All clear",
-      accent: abnormal.length > 0 ? "text-amber-500" : "text-emerald-500",
+      subtitle: alerts.length > 0 ? "Needs review" : "All clear",
+      accent: alerts.length > 0 ? "text-amber-500" : "text-emerald-500",
       gradient:
-        abnormal.length > 0
+        alerts.length > 0
           ? "from-amber-500/80 to-amber-400/20"
           : "from-emerald-500/80 to-emerald-400/20",
     },

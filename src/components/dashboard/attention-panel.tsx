@@ -1,9 +1,10 @@
 "use client";
 
-import { AlertTriangle, HardDrive, Server, Database, Wifi } from "lucide-react";
+import { AlertTriangle, HardDrive, Server, Database, Wifi, Cpu, MemoryStick } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
-import { useDashboard, type Resource, type ResourceType, type ResourceStatus } from "./dashboard-provider";
+import { useDashboard, type ResourceType } from "./dashboard-provider";
+import type { Alert } from "@/lib/data";
 import { FREE_TIER_CAP_BYTES, formatBytes } from "@/lib/cost";
 
 function typeIcon(type: ResourceType) {
@@ -18,30 +19,22 @@ function typeIcon(type: ResourceType) {
   }
 }
 
-function statusDot(status: ResourceStatus) {
-  const colors: Record<ResourceStatus, string> = {
-    running: "bg-emerald-500",
-    stopped: "bg-zinc-400",
-    warning: "bg-amber-500",
-    error: "bg-red-500",
-  };
-  return (
-    <span className="relative flex h-2 w-2">
-      {(status === "running" || status === "warning") && (
-        <span
-          className={`absolute inline-flex h-full w-full animate-ping rounded-full ${colors[status]} opacity-40`}
-        />
-      )}
-      <span className={`relative inline-flex h-2 w-2 rounded-full ${colors[status]}`} />
-    </span>
+function metricIcon(metric: Alert["metric"]) {
+  const cls = "h-3.5 w-3.5";
+  return metric === "CPU" ? (
+    <Cpu className={cls} />
+  ) : (
+    <MemoryStick className={cls} />
   );
 }
 
 export function AttentionPanel() {
   const {
     abnormal,
+    alerts,
     resourcesLoading,
     setSelectedResource,
+    resources,
     totalStorageUsedBytes,
   } = useDashboard();
 
@@ -59,7 +52,7 @@ export function AttentionPanel() {
   }
 
   const storageWarning = totalStorageUsedBytes > FREE_TIER_CAP_BYTES * 0.8;
-  const hasIssues = abnormal.length > 0 || storageWarning;
+  const hasIssues = alerts.length > 0 || abnormal.length > 0 || storageWarning;
 
   if (!hasIssues) return null;
 
@@ -69,34 +62,51 @@ export function AttentionPanel() {
         <CardTitle className="flex items-center gap-2 text-sm font-semibold text-amber-600 dark:text-amber-400">
           <AlertTriangle className="h-4 w-4" />
           Needs Attention
-          {abnormal.length > 0 && (
+          {alerts.length > 0 && (
             <span>
-              — {abnormal.length} resource{abnormal.length > 1 ? "s" : ""}
+              — {alerts.length} alert{alerts.length > 1 ? "s" : ""}
             </span>
           )}
         </CardTitle>
       </CardHeader>
       <CardContent className="pb-4">
         <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-3">
-          {/* Resource alerts */}
-          {abnormal.map((r: Resource) => (
-            <button
-              key={r.id}
-              onClick={() => setSelectedResource(r)}
-              className="flex items-center gap-3 rounded-lg border border-border/60 bg-background/80 p-3 text-left transition-all hover:border-amber-500/40 hover:shadow-sm"
-            >
-              <span className="text-muted-foreground">{typeIcon(r.type)}</span>
-              <div className="min-w-0 flex-1">
-                <p className="truncate text-sm font-medium">{r.name}</p>
-                <div className="mt-0.5 flex items-center gap-2 text-xs text-muted-foreground">
-                  {statusDot(r.status)}
-                  <span className="capitalize">{r.status}</span>
-                  {r.cpuUsage > 0 && <span>• CPU {r.cpuUsage}%</span>}
-                  {r.memoryUsage > 0 && <span>• Mem {r.memoryUsage}%</span>}
+          {/* Consecutive-sample anomaly alerts */}
+          {alerts.map((alert) => {
+            const resource = resources.find(
+              (r) => r.name === alert.resourceName
+            );
+            return (
+              <button
+                key={alert.id}
+                onClick={() => resource && setSelectedResource(resource)}
+                className="flex items-center gap-3 rounded-lg border border-amber-500/30 bg-amber-500/5 p-3 text-left transition-all hover:border-amber-500/40 hover:shadow-sm"
+              >
+                <span className="text-amber-500">
+                  {metricIcon(alert.metric)}
+                </span>
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-center gap-1.5">
+                    <span className="text-muted-foreground">
+                      {typeIcon(alert.resourceType)}
+                    </span>
+                    <p className="truncate text-sm font-medium">
+                      {alert.resourceName}
+                    </p>
+                  </div>
+                  <div className="mt-0.5 flex flex-wrap items-center gap-x-2 gap-y-0.5 text-xs text-muted-foreground">
+                    <span className="font-semibold text-amber-600 dark:text-amber-400">
+                      {alert.metric} {alert.value}%
+                    </span>
+                    <span>· {alert.time}</span>
+                  </div>
+                  <p className="mt-0.5 text-[10px] text-muted-foreground/70">
+                    {alert.reason}
+                  </p>
                 </div>
-              </div>
-            </button>
-          ))}
+              </button>
+            );
+          })}
 
           {/* Storage warning */}
           {storageWarning && (

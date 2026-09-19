@@ -13,7 +13,7 @@
 - **Predictable Cost Model (FinOps)**: Real-time monthly bill calculation with transparent pricing (₹50/month per active compute instance, ₹2/GB storage, ₹0 for stopped resources). Automatically recalculates across database events.
 - **Integrated AI Cloud Advisor**: Real-time word-by-word streaming AI advisor powered by Meta Llama 3.2 via Server-Sent Events (`text/event-stream`), grounded with live infrastructure telemetry and conversational memory.
 - **Hybrid Storage Architecture**: File manager supporting uploads up to 200MB without paid storage tier restrictions (small files $\le 700$KB in Firestore, large files in local IndexedDB with live metadata sync).
-- **Multi-Factor Authentication & Phone Linking**: Secure sign-in with Google OAuth, Email/Password, and SMS OTP verification via Invisible reCAPTCHA.
+- **Multiple Sign-In Methods & Phone Linking**: Secure sign-in with Google OAuth, Email/Password, and SMS OTP verification via Invisible reCAPTCHA.
 - **Ergonomic Responsive Layouts**: Desktop multi-column dashboard with charts, and a tailored 3-section mobile layout (Resources, Files, Billing) with an accessible bottom-right AI assistant.
 
 ---

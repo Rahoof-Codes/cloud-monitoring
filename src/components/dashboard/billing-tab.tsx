@@ -188,18 +188,6 @@ export function BillingTab() {
           )}
         </CardContent>
       </Card>
-
-      {/* Future work note */}
-      <Card className="border-dashed">
-        <CardContent className="p-5">
-          <p className="text-xs text-muted-foreground">
-            <span className="font-semibold">📊 Cost over time (coming soon):</span>{" "}
-            A historical line chart showing daily cost snapshots will be added
-            in a future update. This requires a scheduled Cloud Function to
-            snapshot costs daily.
-          </p>
-        </CardContent>
-      </Card>
     </div>
   );
 }

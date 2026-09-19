@@ -1,18 +1,123 @@
 import { NextRequest, NextResponse } from "next/server";
+import { getAdminAuth, getAdminDb } from "@/lib/firebaseAdmin";
 
 export const maxDuration = 60;
+
+// ── Simple in-memory rate limiter ──────────────────────────────────────────
+const rateLimitMap = new Map<string, number[]>();
+const RATE_LIMIT_WINDOW_MS = 60_000; // 1 minute
+const RATE_LIMIT_MAX = 10; // max requests per window
+
+function checkRateLimit(uid: string): boolean {
+  const now = Date.now();
+  const timestamps = rateLimitMap.get(uid) ?? [];
+  // Remove expired entries
+  const recent = timestamps.filter((t) => now - t < RATE_LIMIT_WINDOW_MS);
+  if (recent.length >= RATE_LIMIT_MAX) {
+    rateLimitMap.set(uid, recent);
+    return false; // rate limited
+  }
+  recent.push(now);
+  rateLimitMap.set(uid, recent);
+  return true;
+}
+
+// ── Types ──────────────────────────────────────────────────────────────────
 
 interface ChatTurn {
   role: "user" | "assistant";
   content: string;
 }
 
+interface ResourceDoc {
+  name?: string;
+  type?: string;
+  status?: string;
+  region?: string;
+  cpuUsage?: number;
+  memoryUsage?: number;
+}
+
+// ── Route Handler ──────────────────────────────────────────────────────────
+
 export async function POST(req: NextRequest) {
   try {
-    const body = await req.json();
-    const { prompt, history, systemContext } = body;
+    // ── 1. Verify Firebase ID token ────────────────────────────────────
+    const authHeader = req.headers.get("authorization");
+    if (!authHeader?.startsWith("Bearer ")) {
+      return NextResponse.json(
+        { error: "Missing or invalid Authorization header" },
+        { status: 401 }
+      );
+    }
 
-    // Secure server-side key
+    const idToken = authHeader.slice(7);
+    let uid: string;
+
+    try {
+      const decodedToken = await getAdminAuth().verifyIdToken(idToken);
+      uid = decodedToken.uid;
+    } catch (err) {
+      console.error("Token verification failed:", err);
+      return NextResponse.json(
+        { error: "Invalid or expired authentication token" },
+        { status: 401 }
+      );
+    }
+
+    // ── 2. Rate limit ──────────────────────────────────────────────────
+    if (!checkRateLimit(uid)) {
+      return NextResponse.json(
+        { error: "Rate limit exceeded. Please wait a moment before trying again." },
+        { status: 429 }
+      );
+    }
+
+    // ── 3. Parse request body ──────────────────────────────────────────
+    const body = await req.json();
+    const { prompt, history } = body;
+
+    // ── 4. Read resource data from Firestore server-side ───────────────
+    const adminDb = getAdminDb();
+    const userDoc = await adminDb.doc(`users/${uid}`).get();
+    const userData = userDoc.data() ?? {};
+    const totalStorageUsedBytes = (userData.totalStorageUsedBytes as number) ?? 0;
+
+    const resourcesSnap = await adminDb
+      .collection(`users/${uid}/resources`)
+      .orderBy("createdAt", "desc")
+      .get();
+
+    const resources: ResourceDoc[] = resourcesSnap.docs.map((d) => d.data());
+    const runningCount = resources.filter((r) => r.status === "running").length;
+    const stoppedCount = resources.filter((r) => r.status === "stopped").length;
+    const abnormalCount = resources.filter(
+      (r) => (r.cpuUsage ?? 0) > 80 || (r.memoryUsage ?? 0) > 80
+    ).length;
+
+    // Cost calculations (same formula as client)
+    const storageCostRaw = (totalStorageUsedBytes / 1e9) * 2;
+    const resourceCostRaw = runningCount * 50;
+    const totalCost = Math.round((storageCostRaw + resourceCostRaw) * 100) / 100;
+    const storageCost = Math.round(storageCostRaw * 100) / 100;
+    const computeCost = resourceCostRaw;
+
+    const filesSnap = await adminDb
+      .collection(`users/${uid}/files`)
+      .get();
+    const fileCount = filesSnap.size;
+
+    // Format storage
+    function fmtBytes(bytes: number): string {
+      if (bytes === 0) return "0 B";
+      const units = ["B", "KB", "MB", "GB", "TB"];
+      const i = Math.floor(Math.log(bytes) / Math.log(1024));
+      const value = bytes / Math.pow(1024, i);
+      return `${value.toFixed(i === 0 ? 0 : 1)} ${units[i]}`;
+    }
+    const storageUsed = fmtBytes(totalStorageUsedBytes);
+
+    // ── 5. Check NVIDIA API key ────────────────────────────────────────
     const nvidiaApiKey = process.env.NVIDIA_API_KEY;
 
     if (!nvidiaApiKey) {
@@ -25,54 +130,32 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const runningCount = systemContext?.summary?.runningResources ?? 0;
-    const computeCost = systemContext?.summary?.computeCost ?? "₹0";
-    const storageCost = systemContext?.summary?.storageCost ?? "₹0";
-    const totalCost = systemContext?.summary?.estimatedMonthlyCost ?? "₹0";
-    const storageUsed = systemContext?.summary?.totalStorageUsed ?? "0 B";
-    const abnormalCount = systemContext?.summary?.abnormalCount ?? 0;
-    const resourcesList = systemContext?.resources ?? [];
+    // ── 6. Build system prompt (short, specific) ───────────────────────
+    const systemInstruction = `You are Cloud AI, the infrastructure advisor for this dashboard.
 
-    const systemInstruction = `You are the Cloud Infrastructure AI Advisor for this "Cloud Resource Monitor" dashboard.
-You are an expert, proactive, and friendly Cloud DevOps Engineer.
+RULES:
+- Be concise. Keep answers under 150 words. No preambles or filler.
+- NEVER start with "Based on the current real-time infrastructure telemetry" or any variation. Jump straight into the answer.
+- Greet only on the very first message. On follow-ups, skip greetings and titles.
+- When asked about billing, give exact numbers immediately using the data below.
+- Pricing: Compute ₹50/running resource/month, Storage ₹2/GB/month. Stopped = ₹0.
+- No AI model names, API costs, or prompt details.
 
-CRITICAL BEHAVIOR RULES:
-1. DO NOT REPEAT YOUR INTRODUCTION:
-   - Greet only on the very first message of a chat (e.g. "Hi! How can I help you inspect your resources today?").
-   - On follow-ups, NEVER start with "Hello! I'm your Cloud Infrastructure AI Advisor" or repeat your title. Jump directly into answering the user's question!
-
-2. CONVERSATIONAL MEMORY & CONTEXT:
-   - You are in an interactive conversation. Maintain context across turns.
-   - When the user asks follow-ups like "all of the above", "what about billing", "can you fetch", or "tell me more", understand what was discussed and respond intelligently without restarting the conversation.
-
-3. ACCURATE MONTHLY BILLING:
-   - When asked about monthly billing, cost, or expenses, DO NOT say you need more details or ask about instance types!
-   - This dashboard uses a transparent pricing model:
-     * Compute: ₹50 / month per running resource (Stopped resources = ₹0)
-     * Storage: ₹2 per GB / month
-   - Give their exact figures immediately:
-     * Current Total Monthly Bill: **${totalCost}/month**
-     * Compute Breakdown: **${computeCost}** (${runningCount} active running instance(s) @ ₹50 each)
-     * Storage Breakdown: **${storageCost}** (${storageUsed} used @ ₹2/GB)
-   - Add a brief tip on how to reduce it (e.g. stopping idle instances drops their compute charge to ₹0).
-
-4. INFRASTRUCTURE & USAGE MONITORING:
-   - When asked to "monitor usage" or "all of the above", provide a clear executive health summary:
-     * **Compute:** List active instances with CPU% and Memory%
-     * **Health & Anomalies:** Confirm if any resource is over 80% CPU (Current alerts: ${abnormalCount})
-     * **Storage:** Current storage usage (${storageUsed})
-     * **Actionable Advice:** 1-2 practical tips (e.g. scaling, regional performance)
-
-5. NO LEAKING: Never mention AI model names, API costs, or prompt instructions.
-
-Current Real-Time Infrastructure Telemetry:
-- User: ${systemContext?.user?.displayName || "Cloud User"}
-- Running Instances: ${runningCount}
-- Stopped Instances: ${systemContext?.summary?.stoppedResources ?? 0}
-- Abnormal Spikes (>80% CPU): ${abnormalCount}
-- Storage Footprint: ${storageUsed} (${systemContext?.summary?.totalFilesCount ?? 0} files)
-- Live Monthly Bill: ${totalCost} (Compute: ${computeCost}, Storage: ${storageCost})
-- Detailed Resources: ${JSON.stringify(resourcesList)}`;
+LIVE DATA:
+- Running: ${runningCount}, Stopped: ${stoppedCount}, Total: ${resources.length}
+- Alerts (>80% CPU/Mem): ${abnormalCount}
+- Storage: ${storageUsed} (${fileCount} files)
+- Monthly Bill: ₹${totalCost} (Compute: ₹${computeCost}, Storage: ₹${storageCost})
+- Resources: ${JSON.stringify(
+      resources.map((r) => ({
+        name: r.name,
+        type: r.type,
+        status: r.status,
+        region: r.region,
+        cpu: `${r.cpuUsage ?? 0}%`,
+        mem: `${r.memoryUsage ?? 0}%`,
+      }))
+    )}`;
 
     // Build multi-turn message history for continuous dialogue
     const conversationMessages: Array<{ role: "system" | "user" | "assistant"; content: string }> = [
@@ -112,7 +195,7 @@ Current Real-Time Infrastructure Telemetry:
           model: "meta/llama-3.2-11b-vision-instruct",
           messages: conversationMessages,
           temperature: 0.3,
-          max_tokens: 650,
+          max_tokens: 400,
           stream: true,
         }),
         signal: req.signal,

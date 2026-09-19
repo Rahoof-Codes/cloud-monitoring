@@ -191,6 +191,7 @@ export function AskAIWidget() {
   const {
     resources,
     abnormal,
+    alerts,
     totalStorageUsedBytes,
     files,
     user,
@@ -252,11 +253,13 @@ export function AskAIWidget() {
       memoryPercent: `${r.memoryUsage}%`,
       isAbnormal: r.cpuUsage > 80,
     })),
-    abnormalAlerts: abnormal.map((a) => ({
-      name: a.name,
-      type: a.type,
-      cpuPercent: `${a.cpuUsage}%`,
-      region: a.region,
+    abnormalAlerts: alerts.map((a) => ({
+      name: a.resourceName,
+      type: a.resourceType,
+      metric: a.metric,
+      value: `${a.value}%`,
+      reason: a.reason,
+      region: "",
     })),
   });
 
@@ -454,13 +457,17 @@ export function AskAIWidget() {
 
     const controller = new AbortController();
     abortControllerRef.current = controller;
-    const context = getSystemSnapshot();
 
     try {
+      // Get the user's Firebase ID token for server-side verification
+      const { getAuth } = await import("firebase/auth");
+      const idToken = await getAuth().currentUser?.getIdToken();
+
       const res = await fetch("/api/ai", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
+          ...(idToken ? { Authorization: `Bearer ${idToken}` } : {}),
         },
         body: JSON.stringify({
           prompt: queryText,
@@ -468,7 +475,6 @@ export function AskAIWidget() {
             role: m.role,
             content: m.content,
           })),
-          systemContext: context,
         }),
         signal: controller.signal,
       });
@@ -580,7 +586,7 @@ export function AskAIWidget() {
         "Analyze my currently running cloud resources, identify high CPU/memory anomalies, and tell me what actions I should take immediately.",
     },
     {
-      label: "Resource Optimization",
+      label: "Optimize Resources",
       icon: Sliders,
       prompt:
         "Analyze my resource allocation and recommend ways to optimize cloud utilization, performance, and efficiency.",
@@ -686,10 +692,10 @@ export function AskAIWidget() {
                       key={idx}
                       onClick={() => executeAIQuery(q.prompt)}
                       disabled={loading}
-                      className="flex items-center gap-1.5 rounded-lg border border-border/60 bg-muted/20 p-2 text-left text-[10.5px] font-medium transition-all hover:border-emerald-500/40 hover:bg-emerald-500/5 hover:text-emerald-600 disabled:opacity-50 truncate"
+                      className="flex items-center gap-1.5 rounded-lg border border-border/60 bg-muted/20 p-2 text-left text-[10.5px] font-medium transition-all hover:border-emerald-500/40 hover:bg-emerald-500/5 hover:text-emerald-600 disabled:opacity-50"
                     >
                       <q.icon className="h-3 w-3 text-emerald-600 shrink-0" />
-                      <span className="truncate">{q.label}</span>
+                      <span className="whitespace-normal leading-tight">{q.label}</span>
                     </button>
                   ))}
                 </div>

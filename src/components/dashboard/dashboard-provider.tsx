@@ -7,7 +7,7 @@
 // exposes them through context to all child components.
 // ---------------------------------------------------------------------------
 
-import { createContext, useContext, useState, useCallback, ReactNode } from "react";
+import { createContext, useContext, useState, useCallback, useEffect, useRef, ReactNode } from "react";
 import type { User } from "firebase/auth";
 import type { AuthState } from "@/lib/useAuth";
 import type { Resource, ResourceType, ResourceStatus } from "@/lib/useResources";
@@ -15,9 +15,12 @@ import type { UserFile } from "@/lib/useFiles";
 import {
   TimeSeriesPoint,
   DistributionSlice,
-  generateCpuTimeSeries,
+  Alert,
+  MetricHistory,
+  buildCpuSnapshotFromResources,
   getResourceDistribution,
   getAbnormalResources,
+  detectAnomalies,
 } from "@/lib/data";
 
 // Re-export types hooks return
@@ -42,6 +45,9 @@ interface DashboardState {
   toggleResourceStatus: (id: string, currentStatus: ResourceStatus) => Promise<void>;
   deleteResource: (id: string) => Promise<void>;
   recalcResourceCost: (res?: Resource[]) => Promise<void>;
+
+  // Alerts (consecutive-sample anomaly detection)
+  alerts: Alert[];
 
   // Files
   files: UserFile[];
@@ -83,6 +89,9 @@ interface DashboardProviderProps {
   filesHook: ReturnType<typeof import("@/lib/useFiles").useFiles>;
 }
 
+/** Max rolling data points kept in the CPU time-series chart */
+const MAX_SERIES_POINTS = 25;
+
 export function DashboardProvider({
   children,
   user,
@@ -90,10 +99,34 @@ export function DashboardProvider({
   resourcesHook,
   filesHook,
 }: DashboardProviderProps) {
-  const [cpuSeries] = useState<TimeSeriesPoint[]>(() => generateCpuTimeSeries());
+  const [cpuSeries, setCpuSeries] = useState<TimeSeriesPoint[]>([]);
+  const [alerts, setAlerts] = useState<Alert[]>([]);
   const [selectedResource, setSelectedResource] = useState<Resource | null>(null);
   const [isAiOpen, setIsAiOpen] = useState(false);
   const [pendingAiPrompt, setPendingAiPrompt] = useState<string | null>(null);
+
+  // Metric history for consecutive-sample anomaly detection
+  const metricHistoryRef = useRef<MetricHistory>(new Map());
+
+  // Accumulate CPU time-series from live resources & run anomaly detection
+  useEffect(() => {
+    const resources = resourcesHook.resources;
+
+    // Build a new snapshot point from live resources
+    const point = buildCpuSnapshotFromResources(resources);
+    if (point) {
+      setCpuSeries((prev) => {
+        const next = [...prev, point];
+        if (next.length > MAX_SERIES_POINTS) next.shift();
+        return next;
+      });
+    }
+
+    // Run anomaly detection on every resource update
+    const newAlerts = detectAnomalies(resources, metricHistoryRef.current);
+    setAlerts(newAlerts);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [resourcesHook.resources]);
 
   const handleSetSelectedResource = useCallback((r: Resource | null) => {
     setSelectedResource(r);
@@ -130,6 +163,7 @@ export function DashboardProvider({
         toggleResourceStatus: resourcesHook.toggleResourceStatus,
         deleteResource: resourcesHook.deleteResource,
         recalcResourceCost: resourcesHook.recalcCost,
+        alerts,
         files: filesHook.files,
         filesLoading: filesHook.loading,
         uploadFile: filesHook.uploadFile,

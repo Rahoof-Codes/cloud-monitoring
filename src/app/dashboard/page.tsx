@@ -69,7 +69,7 @@ export default function DashboardPage() {
       <div className="flex min-h-screen flex-col bg-background">
         <TopBar />
 
-        <main className="flex-1 px-4 py-4 sm:px-6 sm:py-6 lg:px-8">
+        <main className="flex-1 px-4 py-4 pb-24 sm:px-6 sm:py-6 sm:pb-24 lg:px-8">
           {isMobile ? (
             /* ── MOBILE VIEW: 3 DEDICATED SECTIONS WITH COMMON ASK AI ── */
             <MobileSections
