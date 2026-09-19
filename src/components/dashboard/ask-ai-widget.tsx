@@ -478,7 +478,7 @@ export function AskAIWidget() {
         try {
           const errData = await res.json();
           if (errData.error) errMessage = errData.error;
-        } catch {}
+        } catch { }
         throw new Error(errMessage);
       }
 
@@ -552,12 +552,12 @@ export function AskAIWidget() {
         prev.map((m) =>
           m.id === assistantMsgId
             ? {
-                ...m,
-                content:
-                  targetFullTextRef.current ||
-                  `⚠️ **Unable to complete telemetry analysis.**\n\nPlease check network connectivity or try again in a moment.`,
-                isStreaming: false,
-              }
+              ...m,
+              content:
+                targetFullTextRef.current ||
+                `⚠️ **Unable to complete telemetry analysis.**\n\nPlease check network connectivity or try again in a moment.`,
+              isStreaming: false,
+            }
             : m
         )
       );
@@ -699,9 +699,8 @@ export function AskAIWidget() {
                 {messages.map((m) => (
                   <div
                     key={m.id}
-                    className={`group flex flex-col ${
-                      m.role === "user" ? "items-end" : "items-start"
-                    }`}
+                    className={`group flex flex-col ${m.role === "user" ? "items-end" : "items-start"
+                      }`}
                   >
                     <div className="flex items-center gap-1.5 mb-1 px-1 text-[10px] text-muted-foreground/70">
                       <span className="font-medium">
@@ -729,11 +728,10 @@ export function AskAIWidget() {
                       )}
                     </div>
                     <div
-                      className={`relative rounded-2xl px-3.5 py-2.5 text-xs leading-relaxed max-w-[94%] transition-all ${
-                        m.role === "user"
+                      className={`relative rounded-2xl px-3.5 py-2.5 text-xs leading-relaxed max-w-[94%] transition-all ${m.role === "user"
                           ? "bg-primary text-primary-foreground font-medium rounded-tr-sm shadow-sm"
                           : "border border-border/75 bg-muted/25 text-foreground rounded-tl-sm shadow-sm"
-                      }`}
+                        }`}
                     >
                       {m.role === "user" ? (
                         m.content
