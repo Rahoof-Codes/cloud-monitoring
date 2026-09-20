@@ -9,7 +9,7 @@ import { useDashboard } from "./dashboard-provider";
 import { formatBytes } from "@/lib/cost";
 
 export function FileUploader() {
-  const { uploadFile, uploadProgress } = useDashboard();
+  const { uploadFile, uploadProgress, requireAuth } = useDashboard();
   const [isDragOver, setIsDragOver] = useState(false);
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
   const [isUploading, setIsUploading] = useState(false);
@@ -32,11 +32,13 @@ export function FileUploader() {
     e.stopPropagation();
     setIsDragOver(false);
 
+    if (!requireAuth()) return;
+
     const droppedFiles = Array.from(e.dataTransfer.files);
     if (droppedFiles.length > 0) {
       setSelectedFiles((prev) => [...prev, ...droppedFiles]);
     }
-  }, []);
+  }, [requireAuth]);
 
   const handleFileSelect = useCallback(
     (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -53,6 +55,7 @@ export function FileUploader() {
   }, []);
 
   const handleUpload = useCallback(async () => {
+    if (!requireAuth()) return;
     if (selectedFiles.length === 0) return;
     setIsUploading(true);
 
@@ -66,7 +69,7 @@ export function FileUploader() {
 
     setSelectedFiles([]);
     setIsUploading(false);
-  }, [selectedFiles, uploadFile]);
+  }, [requireAuth, selectedFiles, uploadFile]);
 
   return (
     <Card>
@@ -82,7 +85,10 @@ export function FileUploader() {
           onDragOver={handleDragOver}
           onDragLeave={handleDragLeave}
           onDrop={handleDrop}
-          onClick={() => inputRef.current?.click()}
+          onClick={() => {
+            if (!requireAuth()) return;
+            inputRef.current?.click();
+          }}
           className={`cursor-pointer rounded-xl border-2 border-dashed p-8 text-center transition-all ${
             isDragOver
               ? "border-primary bg-primary/5 shadow-inner"

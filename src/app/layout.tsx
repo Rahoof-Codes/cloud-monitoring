@@ -13,6 +13,14 @@ export const metadata: Metadata = {
   title: "Cloud Resource Monitor — Infrastructure Dashboard",
   description:
     "Real-time monitoring dashboard for cloud infrastructure resources including VMs, databases, storage, and network services. Firebase-backed with per-user data isolation.",
+  icons: {
+    icon: [
+      { url: "/icon.png", type: "image/png" },
+      { url: "/favicon.ico", sizes: "any" },
+    ],
+    shortcut: "/favicon.ico",
+    apple: "/apple-icon.png",
+  },
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {

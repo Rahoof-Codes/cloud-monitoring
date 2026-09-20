@@ -13,7 +13,8 @@ import {
   TrendingUp,
 } from "lucide-react";
 import { useDashboard } from "./dashboard-provider";
-import { formatBytes, calculateMonthlyCost, getCostBreakdown } from "@/lib/cost";
+import { formatBytes } from "@/lib/cost";
+import { calculateMonthlyBill } from "@/lib/billing";
 import { AttentionPanel } from "./attention-panel";
 import { ResourceGrid } from "./resource-grid";
 import { FileUploader } from "./file-uploader";
@@ -38,15 +39,17 @@ export function MobileSections({
     abnormal,
     alerts,
     files,
+    usageRecords,
     totalStorageUsedBytes,
+    clockTick,
     setIsAiOpen,
     openAiWithPrompt,
   } = useDashboard();
 
   const runningCount = resources.filter((r) => r.status === "running").length;
   const stoppedCount = resources.filter((r) => r.status === "stopped").length;
-  const monthlyCost = calculateMonthlyCost(totalStorageUsedBytes, runningCount);
-  const breakdown = getCostBreakdown(totalStorageUsedBytes, runningCount);
+  const bill = calculateMonthlyBill(usageRecords, totalStorageUsedBytes, new Date(clockTick));
+  const monthlyCost = bill.totalCost;
 
   return (
     <div className="block md:hidden space-y-4 pb-28">
@@ -131,7 +134,7 @@ export function MobileSections({
                 </span>
               </p>
               <p className="text-[10px] text-emerald-600 dark:text-emerald-400 font-medium">
-                ₹{breakdown.resourceCost}/mo compute fee
+                ₹{bill.computeCost.toFixed(2)}/mo compute fee
               </p>
             </div>
 
@@ -207,7 +210,7 @@ export function MobileSections({
                 {formatBytes(totalStorageUsedBytes)}
               </p>
               <p className="text-[10px] text-violet-600 dark:text-violet-400 font-medium">
-                ₹{breakdown.storageCost}/mo storage fee
+                ₹{bill.storageCost.toFixed(2)}/mo storage fee
               </p>
             </div>
 
@@ -225,7 +228,7 @@ export function MobileSections({
                 </span>
               </p>
               <p className="text-[10px] text-muted-foreground">
-                Transparent rate @ ₹2/GB
+                Transparent AWS rate @ ₹2/GB
               </p>
             </div>
           </div>
@@ -273,7 +276,7 @@ export function MobileSections({
           <button
             onClick={() =>
               openAiWithPrompt(
-                "Explain my monthly cloud bill breakdown (Compute ₹50/resource vs Storage ₹2/GB) and suggest actionable ways to optimize it."
+                `Explain my monthly cloud bill breakdown (Compute ₹${bill.computeCost.toFixed(2)} vs Storage ₹${bill.storageCost.toFixed(2)}) and suggest actionable ways to optimize it.`
               )
             }
             className="w-full flex items-center justify-between rounded-xl border border-emerald-500/30 bg-gradient-to-r from-emerald-500/10 via-teal-500/5 to-emerald-500/10 p-3 text-left transition-all hover:border-emerald-500/50"

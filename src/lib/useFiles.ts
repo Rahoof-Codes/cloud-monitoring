@@ -23,7 +23,7 @@ import {
   orderBy,
 } from "firebase/firestore";
 import { db } from "./firebase";
-import { calculateMonthlyCost } from "./cost";
+import { STORAGE_RATE_PER_GB_MONTH } from "./pricing";
 import { saveLocalBlob, deleteLocalBlob } from "./fileStorage";
 import { toast } from "sonner";
 
@@ -51,7 +51,7 @@ export function useFiles(uid: string | undefined) {
 
   // Real-time listener for files
   useEffect(() => {
-    if (!uid) {
+    if (!uid || uid === "demo-user") {
       setFiles([]);
       setLoading(false);
       return;
@@ -87,23 +87,15 @@ export function useFiles(uid: string | undefined) {
     return unsub;
   }, [uid]);
 
-  // Recalc storage + cost on user doc
+  // Recalc storage on user doc
   const recalcStorage = useCallback(
     async (newTotalBytes: number) => {
-      if (!uid) return;
+      if (!uid || uid === "demo-user") return;
       try {
-        const { getDocs } = await import("firebase/firestore");
-        const resourcesSnap = await getDocs(
-          collection(db, "users", uid, "resources")
-        );
-        const runningCount = resourcesSnap.docs.filter(
-          (d) => d.data().status === "running"
-        ).length;
-
-        const cost = calculateMonthlyCost(newTotalBytes, runningCount);
+        const storageCost = Math.round(((newTotalBytes / 1e9) * STORAGE_RATE_PER_GB_MONTH) * 100) / 100;
         await updateDoc(doc(db, "users", uid), {
           totalStorageUsedBytes: newTotalBytes,
-          estimatedMonthlyCost: cost,
+          estimatedStorageMonthlyCost: storageCost,
         });
       } catch (err) {
         console.error("Storage recalculation failed:", err);

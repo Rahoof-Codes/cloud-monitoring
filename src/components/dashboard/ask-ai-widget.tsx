@@ -23,7 +23,8 @@ import {
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { useDashboard } from "./dashboard-provider";
-import { formatBytes, calculateMonthlyCost, getCostBreakdown } from "@/lib/cost";
+import { formatBytes } from "@/lib/cost";
+import { calculateMonthlyBill } from "@/lib/billing";
 import { toast } from "sonner";
 
 interface Message {
@@ -195,6 +196,9 @@ export function AskAIWidget() {
     totalStorageUsedBytes,
     files,
     user,
+    usageRecords,
+    clockTick,
+    requireAuth,
     isAiOpen,
     setIsAiOpen,
     pendingAiPrompt,
@@ -206,7 +210,7 @@ export function AskAIWidget() {
   const [messages, setMessages] = useState<Message[]>([]);
   const [copiedId, setCopiedId] = useState<string | null>(null);
   const [userHasScrolledUp, setUserHasScrolledUp] = useState(false);
-  const [isExpandedMobile, setIsExpandedMobile] = useState(false);
+  const [isDesktopExpanded, setIsDesktopExpanded] = useState(false);
 
   // Refs for streaming & typewriter effect
   const abortControllerRef = useRef<AbortController | null>(null);
@@ -218,14 +222,10 @@ export function AskAIWidget() {
   const isStreamCompleteRef = useRef<boolean>(false);
 
   const runningResources = resources.filter((r) => r.status === "running");
-  const monthlyCost = calculateMonthlyCost(
-    totalStorageUsedBytes,
-    runningResources.length
-  );
-  const breakdown = getCostBreakdown(
-    totalStorageUsedBytes,
-    runningResources.length
-  );
+  const bill = calculateMonthlyBill(usageRecords, totalStorageUsedBytes, new Date(clockTick));
+  const monthlyCost = bill.totalCost;
+  const storageCost = bill.storageCost;
+  const computeCost = bill.computeCost;
 
   const getSystemSnapshot = () => ({
     user: {
@@ -240,9 +240,9 @@ export function AskAIWidget() {
       abnormalCount: abnormal.length,
       totalStorageUsed: formatBytes(totalStorageUsedBytes),
       totalFilesCount: files.length,
-      estimatedMonthlyCost: `₹${monthlyCost}`,
-      storageCost: `₹${breakdown.storageCost}`,
-      computeCost: `₹${breakdown.resourceCost}`,
+      estimatedMonthlyCost: `₹${monthlyCost.toFixed(2)}`,
+      storageCost: `₹${storageCost.toFixed(2)}`,
+      computeCost: `₹${computeCost.toFixed(2)}`,
     },
     resources: resources.map((r) => ({
       name: r.name,
@@ -414,6 +414,7 @@ export function AskAIWidget() {
 
   const executeAIQuery = async (queryText: string) => {
     if (!queryText.trim() || loading) return;
+    if (!requireAuth()) return;
 
     const time = new Date().toLocaleTimeString([], {
       hour: "2-digit",
@@ -462,12 +463,14 @@ export function AskAIWidget() {
       // Get the user's Firebase ID token for server-side verification
       const { getAuth } = await import("firebase/auth");
       const idToken = await getAuth().currentUser?.getIdToken();
+      const authHeader = idToken ? `Bearer ${idToken}` : "Bearer demo-token";
+      const systemSnapshot = getSystemSnapshot();
 
       const res = await fetch("/api/ai", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          ...(idToken ? { Authorization: `Bearer ${idToken}` } : {}),
+          Authorization: authHeader,
         },
         body: JSON.stringify({
           prompt: queryText,
@@ -475,6 +478,7 @@ export function AskAIWidget() {
             role: m.role,
             content: m.content,
           })),
+          systemContext: systemSnapshot,
         }),
         signal: controller.signal,
       });
@@ -620,7 +624,11 @@ export function AskAIWidget() {
       {/* Floating Chat Window - consumes marked place on right side */}
       {isAiOpen && (
         <div
-          className="fixed bottom-[134px] right-3.5 sm:bottom-20 sm:right-6 z-50 flex flex-col overflow-hidden rounded-2xl border border-border/80 bg-background/95 shadow-2xl backdrop-blur-xl transition-all duration-200 w-[70vw] max-w-[315px] sm:w-[460px] h-[380px] max-h-[50vh] sm:h-[580px] sm:max-h-[82vh]"
+          className={`fixed bottom-[134px] right-3.5 sm:bottom-20 sm:right-6 md:right-8 z-50 flex flex-col overflow-hidden rounded-2xl border border-border/80 bg-background/95 shadow-2xl backdrop-blur-xl transition-all duration-200 w-[70vw] max-w-[315px] h-[380px] max-h-[50vh] ${
+            isDesktopExpanded
+              ? "sm:w-[680px] md:w-[760px] lg:w-[840px] sm:h-[720px] md:h-[780px] lg:h-[840px] sm:max-h-[90vh] md:max-h-[92vh]"
+              : "sm:w-[500px] md:w-[560px] lg:w-[600px] sm:h-[640px] md:h-[700px] lg:h-[740px] sm:max-h-[85vh] md:max-h-[88vh]"
+          }`}
         >
           {/* Header */}
           <div className="flex items-center justify-between border-b border-border/60 bg-muted/30 px-3 py-2 sm:px-4 sm:py-3">
@@ -656,15 +664,26 @@ export function AskAIWidget() {
                   title="Clear chat"
                   className="rounded-lg p-1 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
                 >
-                  <RefreshCw className="h-3.5 w-3.5" />
+                  <RefreshCw className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
                 </button>
               )}
+              <button
+                onClick={() => setIsDesktopExpanded(!isDesktopExpanded)}
+                title={isDesktopExpanded ? "Standard width" : "Expanded width"}
+                className="hidden sm:inline-flex rounded-lg p-1 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+              >
+                {isDesktopExpanded ? (
+                  <Minimize2 className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+                ) : (
+                  <Maximize2 className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+                )}
+              </button>
               <button
                 onClick={() => setIsAiOpen(false)}
                 title="Close"
                 className="rounded-lg p-1 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
               >
-                <X className="h-4 w-4" />
+                <X className="h-4 w-4 sm:h-4.5 sm:w-4.5" />
               </button>
             </div>
           </div>
@@ -673,7 +692,7 @@ export function AskAIWidget() {
           <div
             ref={scrollContainerRef}
             onScroll={handleScroll}
-            className="relative flex-1 overflow-y-auto p-2.5 sm:p-3.5 space-y-2.5 sm:space-y-3.5 text-xs"
+            className="relative flex-1 overflow-y-auto p-2.5 sm:p-4 space-y-2.5 sm:space-y-4 text-xs"
           >
             {messages.length === 0 ? (
               <div className="flex flex-col items-center justify-center h-full py-4 text-center">
@@ -681,12 +700,12 @@ export function AskAIWidget() {
                   <Bot className="h-5 w-5" />
                 </div>
                 <h4 className="text-[11.5px] font-semibold">How can I assist you?</h4>
-                <p className="mt-0.5 text-[10px] text-muted-foreground max-w-[240px] leading-relaxed">
+                <p className="mt-0.5 text-[10px] sm:text-xs text-muted-foreground max-w-[240px] sm:max-w-[360px] leading-relaxed">
                   Real-time telemetry, anomaly analysis & cost guidance.
                 </p>
 
                 {/* Quick Prompts */}
-                <div className="mt-3 grid grid-cols-1 sm:grid-cols-2 gap-1.5 w-full">
+                <div className="mt-3 grid grid-cols-1 sm:grid-cols-2 gap-1.5 sm:gap-2 w-full">
                   {quickPrompts.map((q, idx) => (
                     <button
                       key={idx}
@@ -734,7 +753,7 @@ export function AskAIWidget() {
                       )}
                     </div>
                     <div
-                      className={`relative rounded-2xl px-3.5 py-2.5 text-xs leading-relaxed max-w-[94%] transition-all ${m.role === "user"
+                      className={`relative rounded-2xl px-3.5 py-2.5 sm:px-4 sm:py-3 text-xs leading-relaxed max-w-[94%] sm:max-w-[88%] transition-all ${m.role === "user"
                           ? "bg-primary text-primary-foreground font-medium rounded-tr-sm shadow-sm"
                           : "border border-border/75 bg-muted/25 text-foreground rounded-tl-sm shadow-sm"
                         }`}
@@ -785,7 +804,7 @@ export function AskAIWidget() {
           )}
 
           {/* Input Footer */}
-          <div className="border-t border-border/60 p-2.5 bg-background">
+          <div className="border-t border-border/60 p-2.5 sm:p-3.5 bg-background">
             <form
               onSubmit={(e) => {
                 e.preventDefault();

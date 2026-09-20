@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Cloud, LogOut, User as UserIcon, Phone, ShieldCheck } from "lucide-react";
+import { Cloud, LogOut, User as UserIcon } from "lucide-react";
 import { ThemeToggle } from "./theme-toggle";
 import { useDashboard } from "./dashboard-provider";
 import { ProfileDialog } from "./profile-dialog";
@@ -14,9 +14,11 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { useDemoGuard } from "./demo-guard";
 
 export function TopBar() {
-  const { user, auth } = useDashboard();
+  const { user, auth, isDemoMode } = useDashboard();
+  const { exitDemoMode } = useDemoGuard();
   const [profileOpen, setProfileOpen] = useState(false);
 
   const initials = (user.displayName ?? "U")
@@ -67,17 +69,7 @@ export function TopBar() {
                 <div className="flex flex-col gap-1">
                   <p className="text-sm font-medium">{user.displayName || "Cloud User"}</p>
                   <p className="text-xs text-muted-foreground">{user.email || "No email"}</p>
-                  {user.phoneNumber ? (
-                    <div className="mt-1 flex items-center gap-1.5 text-[11px] font-medium text-emerald-600 dark:text-emerald-400">
-                      <ShieldCheck className="h-3.5 w-3.5" />
-                      <span>{user.phoneNumber}</span>
-                    </div>
-                  ) : (
-                    <div className="mt-1 flex items-center gap-1.5 text-[11px] text-amber-600 dark:text-amber-400">
-                      <Phone className="h-3 w-3" />
-                      <span>Phone not linked</span>
-                    </div>
-                  )}
+
                 </div>
               </DropdownMenuLabel>
               <DropdownMenuSeparator />
@@ -86,15 +78,15 @@ export function TopBar() {
                 className="cursor-pointer"
               >
                 <UserIcon className="mr-2 h-4 w-4" />
-                Profile & Mobile Link
+                Profile
               </DropdownMenuItem>
               <DropdownMenuSeparator />
               <DropdownMenuItem
-                onClick={auth.signOut}
+                onClick={isDemoMode ? exitDemoMode : auth.signOut}
                 className="cursor-pointer text-destructive focus:text-destructive"
               >
                 <LogOut className="mr-2 h-4 w-4" />
-                Sign Out
+                {isDemoMode ? "Exit Demo / Sign In" : "Sign Out"}
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>

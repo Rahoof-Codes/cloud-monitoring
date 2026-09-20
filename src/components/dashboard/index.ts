@@ -11,3 +11,5 @@ export { BillingTab } from "./billing-tab";
 export { AskAIWidget } from "./ask-ai-widget";
 export { ThemeToggle } from "./theme-toggle";
 export { MobileSections } from "./mobile-sections";
+export { DemoBanner } from "./demo-banner";
+export { useDemoGuard } from "./demo-guard";

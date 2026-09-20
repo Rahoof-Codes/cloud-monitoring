@@ -11,6 +11,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useDashboard } from "./dashboard-provider";
 import { formatBytes } from "@/lib/cost";
+import { calculateMonthlyBill } from "@/lib/billing";
 
 interface SummaryItem {
   label: string;
@@ -25,8 +26,10 @@ export function SummaryCards() {
   const {
     resources,
     resourcesLoading,
+    usageRecords,
     totalStorageUsedBytes,
     alerts,
+    clockTick,
   } = useDashboard();
 
   if (resourcesLoading) {
@@ -45,11 +48,9 @@ export function SummaryCards() {
     );
   }
 
-  // Compute estimated monthly cost from context
   const runningCount = resources.filter((r) => r.status === "running").length;
-  const storageCostRaw = (totalStorageUsedBytes / 1e9) * 2;
-  const resourceCostRaw = runningCount * 50;
-  const totalCost = Math.round((storageCostRaw + resourceCostRaw) * 100) / 100;
+  const bill = calculateMonthlyBill(usageRecords, totalStorageUsedBytes, new Date(clockTick));
+  const totalCost = bill.totalCost;
 
   const items: SummaryItem[] = [
     {

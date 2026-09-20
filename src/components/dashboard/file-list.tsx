@@ -32,7 +32,7 @@ import { formatBytes, FREE_TIER_CAP_BYTES } from "@/lib/cost";
 import { getLocalBlob } from "@/lib/fileStorage";
 
 export function FileList() {
-  const { files, filesLoading, deleteFile, totalStorageUsedBytes } =
+  const { files, filesLoading, deleteFile, totalStorageUsedBytes, requireAuth } =
     useDashboard();
   const [deleteTarget, setDeleteTarget] = useState<UserFile | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
@@ -43,6 +43,7 @@ export function FileList() {
   );
 
   const handleDelete = async () => {
+    if (!requireAuth()) return;
     if (!deleteTarget) return;
     setIsDeleting(true);
     try {
@@ -212,7 +213,10 @@ export function FileList() {
                             variant="ghost"
                             size="icon"
                             className="h-7 w-7 text-destructive/70 hover:text-destructive"
-                            onClick={() => setDeleteTarget(file)}
+                            onClick={() => {
+                              if (!requireAuth()) return;
+                              setDeleteTarget(file);
+                            }}
                             title="Delete"
                           >
                             <Trash2 className="h-3.5 w-3.5" />

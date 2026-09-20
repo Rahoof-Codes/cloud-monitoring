@@ -2,23 +2,19 @@
 
 export const dynamic = "force-dynamic";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import {
   Cloud,
   Mail,
   Lock,
   User as UserIcon,
-  Phone,
   ArrowRight,
   Loader2,
-  CheckCircle2,
-  Info,
+  Sparkles,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/lib/useAuth";
-import { RecaptchaVerifier, type ConfirmationResult } from "firebase/auth";
-import { auth } from "@/lib/firebase";
 import { toast } from "sonner";
 
 export default function LoginPage() {
@@ -28,13 +24,11 @@ export default function LoginPage() {
     signInWithGoogle,
     signInWithEmail,
     signUpWithEmail,
-    signInWithPhone,
-    confirmPhoneCode,
   } = useAuth();
   const router = useRouter();
 
   // Auth method state
-  const [method, setMethod] = useState<"options" | "email" | "phone">("options");
+  const [method, setMethod] = useState<"options" | "email">("options");
   const [emailMode, setEmailMode] = useState<"signin" | "signup">("signin");
 
   // Email form state
@@ -43,15 +37,7 @@ export default function LoginPage() {
   const [password, setPassword] = useState("");
   const [emailSubmitting, setEmailSubmitting] = useState(false);
 
-  // Phone form state
-  const [phoneNumber, setPhoneNumber] = useState("");
-  const [otpCode, setOtpCode] = useState("");
-  const [phoneStep, setPhoneStep] = useState<"input" | "otp">("input");
-  const [phoneSubmitting, setPhoneSubmitting] = useState(false);
-  const [confirmationResult, setConfirmationResult] =
-    useState<ConfirmationResult | null>(null);
 
-  const recaptchaVerifierRef = useRef<RecaptchaVerifier | null>(null);
 
   useEffect(() => {
     if (!loading && user) {
@@ -85,92 +71,7 @@ export default function LoginPage() {
     }
   };
 
-  const handleSendPhoneOtp = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!phoneNumber || phoneNumber.trim().length < 8) {
-      toast.error("Please enter a valid phone number with country code (e.g. +91...)");
-      return;
-    }
 
-    setPhoneSubmitting(true);
-    try {
-      if (recaptchaVerifierRef.current) {
-        try {
-          recaptchaVerifierRef.current.clear();
-        } catch {
-          // ignore
-        }
-        recaptchaVerifierRef.current = null;
-      }
-      const container = document.getElementById("login-recaptcha-container");
-      if (container) {
-        container.innerHTML = "";
-      }
-
-      recaptchaVerifierRef.current = new RecaptchaVerifier(
-        auth,
-        "login-recaptcha-container",
-        {
-          size: "invisible",
-          callback: () => {},
-          "expired-callback": () => {
-            toast.error("reCAPTCHA expired. Please try again.");
-          },
-        }
-      );
-
-      const formattedNumber = phoneNumber.trim().startsWith("+")
-        ? phoneNumber.trim()
-        : `+${phoneNumber.trim()}`;
-
-      const result = await signInWithPhone(
-        formattedNumber,
-        recaptchaVerifierRef.current
-      );
-
-      setConfirmationResult(result);
-      setPhoneStep("otp");
-    } catch (err) {
-      console.error("Phone sign in error:", err);
-      const errMsg = err instanceof Error ? err.message : String(err);
-      if (errMsg.includes("operation-not-allowed") || errMsg.includes("SMS unable to be sent")) {
-        toast.error(
-          "Firebase SMS region not enabled. Add a Test Phone Number in Firebase Console -> Authentication -> Sign-in method -> Phone (e.g. +91 9999999999 / code 123456)."
-        );
-      } else if (errMsg.includes("invalid-phone-number") || errMsg.includes("INVALID_LENGTH")) {
-        toast.error("Invalid phone number format. Please include country code (e.g. +91 98765 43210).");
-      }
-      if (recaptchaVerifierRef.current) {
-        try {
-          recaptchaVerifierRef.current.clear();
-        } catch {
-          // ignore
-        }
-        recaptchaVerifierRef.current = null;
-      }
-      const container = document.getElementById("login-recaptcha-container");
-      if (container) container.innerHTML = "";
-    } finally {
-      setPhoneSubmitting(false);
-    }
-  };
-
-  const handleVerifyPhoneOtp = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!confirmationResult || !otpCode) {
-      toast.error("Please enter the 6-digit verification code");
-      return;
-    }
-
-    setPhoneSubmitting(true);
-    try {
-      await confirmPhoneCode(confirmationResult, otpCode.trim(), false);
-    } catch (err) {
-      console.error("OTP verification error:", err);
-    } finally {
-      setPhoneSubmitting(false);
-    }
-  };
 
   if (loading) {
     return (
@@ -180,10 +81,17 @@ export default function LoginPage() {
     );
   }
 
+  const handleTryDemo = () => {
+    if (typeof window !== "undefined") {
+      localStorage.setItem("crm_demo_mode", "true");
+      sessionStorage.setItem("crm_demo_mode", "true");
+    }
+    toast.info("Entering Demo Mode with sample data");
+    router.push("/dashboard");
+  };
+
   return (
     <div className="relative flex min-h-screen items-center justify-center overflow-hidden bg-background py-8">
-      {/* Invisible container for phone reCAPTCHA */}
-      <div id="login-recaptcha-container" />
 
       {/* Animated gradient background */}
       <div className="pointer-events-none absolute inset-0 overflow-hidden">
@@ -217,6 +125,17 @@ export default function LoginPage() {
               Real-time per-user infrastructure monitoring, live usage metrics, and cost forecasting.
             </p>
           </div>
+
+          {/* Try Demo Button */}
+          <Button
+            type="button"
+            variant="outline"
+            onClick={handleTryDemo}
+            className="mb-4 w-full gap-2 rounded-xl border-amber-500/40 bg-amber-500/10 py-5 text-sm font-semibold text-amber-700 dark:text-amber-300 hover:bg-amber-500/20 transition-all shadow-xs"
+          >
+            <Sparkles className="h-4 w-4 text-amber-500" />
+            Try demo (view sample data)
+          </Button>
 
           {/* Quick Sign In with Google */}
           <Button
@@ -262,39 +181,7 @@ export default function LoginPage() {
             <div className="border-t border-border/80 w-full" />
           </div>
 
-          {/* Method switch tabs */}
-          <div className="grid grid-cols-2 gap-2 rounded-xl bg-muted/50 p-1 mb-5">
-            <button
-              type="button"
-              onClick={() => {
-                setMethod("email");
-                setPhoneStep("input");
-              }}
-              className={`flex items-center justify-center gap-2 rounded-lg py-1.5 text-xs font-medium transition-all ${
-                method === "email" || method === "options"
-                  ? "bg-background text-foreground shadow-sm"
-                  : "text-muted-foreground hover:text-foreground"
-              }`}
-            >
-              <Mail className="h-3.5 w-3.5" />
-              Email & Password
-            </button>
-            <button
-              type="button"
-              onClick={() => {
-                setMethod("phone");
-                setPhoneStep("input");
-              }}
-              className={`flex items-center justify-center gap-2 rounded-lg py-1.5 text-xs font-medium transition-all ${
-                method === "phone"
-                  ? "bg-background text-foreground shadow-sm"
-                  : "text-muted-foreground hover:text-foreground"
-              }`}
-            >
-              <Phone className="h-3.5 w-3.5" />
-              Phone SMS OTP
-            </button>
-          </div>
+
 
           {/* Email / Password Form */}
           {(method === "email" || method === "options") && (
@@ -400,114 +287,7 @@ export default function LoginPage() {
             </form>
           )}
 
-          {/* Phone SMS OTP Form */}
-          {method === "phone" && (
-            <div className="space-y-3.5">
-              {phoneStep === "input" ? (
-                <form onSubmit={handleSendPhoneOtp} className="space-y-3.5">
-                  <div className="space-y-1">
-                    <label className="text-xs font-medium text-muted-foreground">
-                      Mobile Number (with Country Code)
-                    </label>
-                    <div className="relative">
-                      <Phone className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
-                      <input
-                        type="tel"
-                        required
-                        value={phoneNumber}
-                        onChange={(e) => setPhoneNumber(e.target.value)}
-                        placeholder="+91 98765 43210"
-                        className="w-full rounded-lg border border-input bg-background pl-9 pr-3 py-2 text-sm outline-none ring-ring focus:ring-2"
-                        disabled={phoneSubmitting}
-                      />
-                    </div>
-                  </div>
 
-                  <Button
-                    type="submit"
-                    disabled={phoneSubmitting || !phoneNumber.trim()}
-                    className="w-full gap-2 rounded-xl py-5 text-sm font-semibold"
-                  >
-                    {phoneSubmitting ? (
-                      <>
-                        <Loader2 className="h-4 w-4 animate-spin" />
-                        Sending OTP…
-                      </>
-                    ) : (
-                      <>
-                        Send Verification Code
-                        <ArrowRight className="h-4 w-4" />
-                      </>
-                    )}
-                  </Button>
-                </form>
-              ) : (
-                <form onSubmit={handleVerifyPhoneOtp} className="space-y-3.5">
-                  <div className="space-y-1">
-                    <div className="flex items-center justify-between">
-                      <label className="text-xs font-medium text-muted-foreground">
-                        Enter 6-Digit SMS Code
-                      </label>
-                      <button
-                        type="button"
-                        onClick={() => setPhoneStep("input")}
-                        className="text-[11px] text-primary hover:underline"
-                      >
-                        Change Number
-                      </button>
-                    </div>
-                    <input
-                      type="text"
-                      maxLength={6}
-                      value={otpCode}
-                      onChange={(e) => setOtpCode(e.target.value.replace(/\D/g, ""))}
-                      placeholder="123456"
-                      className="w-full rounded-lg border border-input bg-background px-3 py-2 text-center font-mono text-lg tracking-widest outline-none ring-ring focus:ring-2"
-                      disabled={phoneSubmitting}
-                      autoFocus
-                    />
-                  </div>
-
-                  <div className="flex gap-2">
-                    <Button
-                      type="button"
-                      variant="outline"
-                      onClick={() => setPhoneStep("input")}
-                      disabled={phoneSubmitting}
-                      className="flex-1"
-                    >
-                      Back
-                    </Button>
-                    <Button
-                      type="submit"
-                      disabled={phoneSubmitting || otpCode.length < 6}
-                      className="flex-1 gap-2"
-                    >
-                      {phoneSubmitting ? (
-                        <>
-                          <Loader2 className="h-4 w-4 animate-spin" />
-                          Verifying…
-                        </>
-                      ) : (
-                        <>
-                          <CheckCircle2 className="h-4 w-4" />
-                          Sign In
-                        </>
-                      )}
-                    </Button>
-                  </div>
-                </form>
-              )}
-
-              {/* Developer Tip */}
-              <div className="flex items-start gap-2 rounded-lg bg-blue-500/10 p-2.5 text-xs text-blue-600 dark:text-blue-400">
-                <Info className="mt-0.5 h-3.5 w-3.5 shrink-0" />
-                <p className="leading-tight text-[11px]">
-                  <strong>Tip:</strong> Test numbers configured in Firebase Console (e.g. +91 9999999999 / code 123456) bypass SMS quotas.
-                </p>
-              </div>
-            </div>
-          )}
 
           {/* Security note */}
           <p className="mt-6 text-center text-[11px] text-muted-foreground/60">

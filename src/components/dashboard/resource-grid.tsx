@@ -28,8 +28,9 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { useDashboard, type Resource, type ResourceType, type ResourceStatus } from "./dashboard-provider";
+import { useDashboard, type Resource, type ResourceType, type ResourceStatus, type ResourceSize } from "./dashboard-provider";
 import { REGIONS } from "@/lib/useResources";
+import { getHourlyRate, PRICING_TIERS } from "@/lib/pricing";
 
 // ── Helpers ─────────────────────────────────────────────────────────────────
 
@@ -84,17 +85,22 @@ function AddResourceDialog() {
   const [open, setOpen] = useState(false);
   const [name, setName] = useState("");
   const [type, setType] = useState<ResourceType>("VM");
+  const [size, setSize] = useState<ResourceSize>("small");
   const [region, setRegion] = useState<string>(REGIONS[0]);
   const [isCreating, setIsCreating] = useState(false);
+
+  const currentRate = getHourlyRate(type, size);
+  const tierInfo = PRICING_TIERS[type]?.[size];
 
   const handleCreate = async () => {
     if (!name.trim()) return;
     setIsCreating(true);
-    await addResource({ name: name.trim(), type, region });
+    await addResource({ name: name.trim(), type, size, region });
     setIsCreating(false);
     setOpen(false);
     setName("");
     setType("VM");
+    setSize("small");
     setRegion(REGIONS[0]);
   };
 
@@ -110,8 +116,7 @@ function AddResourceDialog() {
         <DialogHeader>
           <DialogTitle>Add Resource</DialogTitle>
           <DialogDescription>
-            Create a new simulated cloud resource. CPU and memory values will be
-            nudged automatically to simulate live telemetry.
+            Create a new simulated cloud resource with AWS Mumbai telemetry and on-demand pricing.
           </DialogDescription>
         </DialogHeader>
         <div className="space-y-4 py-2">
@@ -142,11 +147,47 @@ function AddResourceDialog() {
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="VM">VM</SelectItem>
-                <SelectItem value="Database">Database</SelectItem>
-                <SelectItem value="Network">Network</SelectItem>
+                <SelectItem value="VM">VM (Compute Engine)</SelectItem>
+                <SelectItem value="Database">Database (Managed SQL/NoSQL)</SelectItem>
+                <SelectItem value="Network">Network (Load Balancer)</SelectItem>
               </SelectContent>
             </Select>
+          </div>
+
+          {/* Size */}
+          <div className="space-y-1.5">
+            <div className="flex items-center justify-between">
+              <label className="text-xs font-medium text-muted-foreground">
+                Size Tier
+              </label>
+              <span className="text-xs font-semibold text-emerald-600 dark:text-emerald-400">
+                ₹{currentRate.toFixed(2)}/hr
+              </span>
+            </div>
+            <Select
+              value={size}
+              onValueChange={(v) => setSize(v as ResourceSize)}
+            >
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="small">
+                  Small — {PRICING_TIERS[type]?.small?.label ?? "Small"} (₹{PRICING_TIERS[type]?.small?.hourlyRate.toFixed(2)}/hr)
+                </SelectItem>
+                <SelectItem value="medium">
+                  Medium — {PRICING_TIERS[type]?.medium?.label ?? "Medium"} (₹{PRICING_TIERS[type]?.medium?.hourlyRate.toFixed(2)}/hr)
+                </SelectItem>
+                <SelectItem value="large">
+                  Large — {PRICING_TIERS[type]?.large?.label ?? "Large"} (₹{PRICING_TIERS[type]?.large?.hourlyRate.toFixed(2)}/hr)
+                </SelectItem>
+              </SelectContent>
+            </Select>
+            {tierInfo && (
+              <p className="text-[11px] text-muted-foreground/80">
+                {tierInfo.specs}
+              </p>
+            )}
           </div>
 
           {/* Region */}
@@ -161,7 +202,7 @@ function AddResourceDialog() {
               <SelectContent>
                 {REGIONS.map((r) => (
                   <SelectItem key={r} value={r}>
-                    {r}
+                    {r} {r === "ap-south-1" ? "(AWS Mumbai)" : ""}
                   </SelectItem>
                 ))}
               </SelectContent>
@@ -199,8 +240,16 @@ function ResourceCard({ resource }: { resource: Resource }) {
           </div>
           <div>
             <p className="text-sm font-semibold leading-tight">{resource.name}</p>
-            <p className="text-xs text-muted-foreground">
-              {resource.type} · {resource.region}
+            <p className="text-xs text-muted-foreground flex items-center gap-1.5 flex-wrap">
+              <span>{resource.type}</span>
+              <span>·</span>
+              <span className="capitalize font-medium text-foreground/80">{resource.size || "small"}</span>
+              <span>·</span>
+              <span className="font-semibold text-emerald-600 dark:text-emerald-400">
+                ₹{(resource.hourlyRate ?? getHourlyRate(resource.type, resource.size)).toFixed(2)}/hr
+              </span>
+              <span>·</span>
+              <span>{resource.region}</span>
             </p>
           </div>
         </div>
