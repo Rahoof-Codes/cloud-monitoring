@@ -40,6 +40,73 @@ interface ResourceDoc {
   memoryUsage?: number;
 }
 
+interface TelemetrySnapshot {
+  runningCount: number;
+  stoppedCount: number;
+  abnormalCount: number;
+  totalCost: number;
+  computeCost: number;
+  storageCost: number;
+  storageUsed: string;
+  fileCount: number;
+  resourcesList: any[];
+  abnormalAlerts: any[];
+}
+
+function generateTelemetryFallback(promptText: string, data: TelemetrySnapshot): string {
+  const p = promptText.toLowerCase();
+
+  if (p.includes("anomal") || p.includes("audit") || p.includes("action") || p.includes("health")) {
+    if (data.abnormalCount > 0 || data.abnormalAlerts.length > 0) {
+      const alertLines = data.abnormalAlerts
+        .map(
+          (a) =>
+            `- **${a.name || a.resourceName || "Resource"}** (${a.type || a.resourceType || "Service"}): elevated ${a.metric || "CPU/Memory"} at ${a.value || ">80%"}. Recommendation: scale capacity or check runaway processes.`
+        )
+        .join("\n");
+      return `Identified **${data.abnormalCount}** high-utilization alert(s):\n\n${alertLines || "- High CPU load detected on active instances."}\n\n**Immediate Actions:**\n1. Inspect running background tasks on affected instances.\n2. Scale instance tier or distribute load across available regions.\n3. Terminate idle zombie workers to free CPU and memory headroom.`;
+    }
+    return `All **${data.runningCount}** active resource(s) are operating within healthy operational thresholds (<80% CPU/Memory).\n\nNo anomalous spikes detected across your infrastructure telemetry.`;
+  }
+
+  if (p.includes("bill") || p.includes("cost") || p.includes("price") || p.includes("charge")) {
+    return `### Current Billing Summary\n- **Estimated Total Bill:** ₹${data.totalCost.toFixed(2)}/month\n- **Compute Charges:** ₹${data.computeCost.toFixed(2)} (${data.runningCount} active running instance(s))\n- **Storage Charges:** ₹${data.storageCost.toFixed(2)} (${data.storageUsed} across ${data.fileCount} files)\n\n*Cost Tip: Stopped resources incur ₹0 compute charges. Stopping idle VMs saves ₹0.85 to ₹8.00/hr immediately.*`;
+  }
+
+  if (p.includes("explain") || p.includes("system") || p.includes("function") || p.includes("devops") || p.includes("how")) {
+    return `### Cloud Infrastructure Monitoring Overview\nThis monitoring platform provides real-time telemetry tracking and DevOps health oversight:\n\n1. **Telemetry Ingestion:** Continuously captures CPU, memory, and operational state across all VMs, databases, and network services.\n2. **Anomaly Engine:** Flags spikes (>80% CPU or memory) in real time to prevent service degradation.\n3. **Granular Usage Billing:** Tracks running seconds with hourly rates and storage footprint (₹2/GB/month).\n4. **Security Isolation:** Provides per-user Firestore isolation and token-verified API protection.`;
+  }
+
+  if (p.includes("optimize") || p.includes("utiliz") || p.includes("efficien")) {
+    return `### Infrastructure Optimization Tips\n- **Resource Sizing:** Currently running **${data.runningCount}** resource(s) with **${data.stoppedCount}** stopped.\n- **Storage Footprint:** **${data.storageUsed}** allocated across **${data.fileCount}** file(s).\n- **Action:** Scale down underutilized instances during off-peak hours and clean up temporary storage artifacts.`;
+  }
+
+  return `Currently tracking **${data.runningCount}** running and **${data.stoppedCount}** stopped cloud resources with **${data.abnormalCount}** alert(s). Monthly estimated bill is ₹${data.totalCost.toFixed(2)} with ${data.storageUsed} storage footprint. How can I assist with your infrastructure?`;
+}
+
+function createFallbackStream(text: string): Response {
+  const encoder = new TextEncoder();
+  const words = text.split(/(\s+)/);
+  const stream = new ReadableStream({
+    async start(controller) {
+      for (const word of words) {
+        if (!word) continue;
+        controller.enqueue(encoder.encode(`data: ${JSON.stringify({ text: word })}\n\n`));
+      }
+      controller.enqueue(encoder.encode("data: [DONE]\n\n"));
+      controller.close();
+    },
+  });
+
+  return new Response(stream, {
+    headers: {
+      "Content-Type": "text/event-stream; charset=utf-8",
+      "Cache-Control": "no-cache, no-transform",
+      Connection: "keep-alive",
+    },
+  });
+}
+
 // ── Route Handler ──────────────────────────────────────────────────────────
 
 export async function POST(req: NextRequest) {
@@ -243,47 +310,72 @@ ${abnormalAlerts.length > 0 ? `- Active Alerts: ${JSON.stringify(abnormalAlerts)
       const recentHistory: ChatTurn[] = history.slice(-8);
       for (const turn of recentHistory) {
         if (turn.role === "user" || turn.role === "assistant") {
+          // Skip any failed assistant error messages in history so errors don't corrupt the prompt
+          if (
+            turn.role === "assistant" &&
+            (turn.content.includes("Unable to complete") || !turn.content.trim())
+          ) {
+            continue;
+          }
           conversationMessages.push({
             role: turn.role,
             content: turn.content,
           });
         }
       }
-    } else {
+    }
+
+    // ALWAYS append the current user prompt!
+    if (prompt && typeof prompt === "string" && prompt.trim()) {
       conversationMessages.push({
         role: "user",
-        content: prompt,
+        content: prompt.trim(),
       });
     }
 
-    const upstreamResponse = await fetch(
-      "https://integrate.api.nvidia.com/v1/chat/completions",
-      {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${nvidiaApiKey}`,
-        },
-        body: JSON.stringify({
-          model: "meta/llama-3.2-11b-vision-instruct",
-          messages: conversationMessages,
-          temperature: 0.3,
-          max_tokens: 400,
-          stream: true,
-        }),
-        signal: req.signal,
-      }
-    );
+    const telemetrySnapshot: TelemetrySnapshot = {
+      runningCount,
+      stoppedCount,
+      abnormalCount,
+      totalCost,
+      computeCost,
+      storageCost,
+      storageUsed,
+      fileCount,
+      resourcesList,
+      abnormalAlerts,
+    };
 
-    if (!upstreamResponse.ok) {
-      const errText = await upstreamResponse.text();
-      console.error("AI upstream service error:", errText);
-      return NextResponse.json(
+    let upstreamResponse: Response | null = null;
+    try {
+      upstreamResponse = await fetch(
+        "https://integrate.api.nvidia.com/v1/chat/completions",
         {
-          error: `AI service error (${upstreamResponse.status})`,
-        },
-        { status: upstreamResponse.status }
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${nvidiaApiKey}`,
+          },
+          body: JSON.stringify({
+            model: "meta/llama-3.2-11b-vision-instruct",
+            messages: conversationMessages,
+            temperature: 0.3,
+            max_tokens: 400,
+            stream: true,
+          }),
+          signal: req.signal,
+        }
       );
+    } catch (fetchErr) {
+      console.warn("AI upstream fetch failed, using telemetry advisor fallback:", fetchErr);
+    }
+
+    // If upstream service is unavailable or returns an error status, use high-fidelity telemetry fallback
+    if (!upstreamResponse || !upstreamResponse.ok) {
+      const errText = upstreamResponse ? await upstreamResponse.text().catch(() => "") : "";
+      console.warn(`AI upstream service error (${upstreamResponse?.status}): ${errText}`);
+      const fallbackReply = generateTelemetryFallback(prompt || "", telemetrySnapshot);
+      return createFallbackStream(fallbackReply);
     }
 
     const encoder = new TextEncoder();

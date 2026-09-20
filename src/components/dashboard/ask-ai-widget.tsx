@@ -474,10 +474,12 @@ export function AskAIWidget() {
         },
         body: JSON.stringify({
           prompt: queryText,
-          history: messages.map((m) => ({
-            role: m.role,
-            content: m.content,
-          })),
+          history: messages
+            .filter((m) => !m.content.includes("Unable to complete") && m.content.trim())
+            .map((m) => ({
+              role: m.role,
+              content: m.content,
+            })),
           systemContext: systemSnapshot,
         }),
         signal: controller.signal,
