@@ -626,10 +626,10 @@ export function AskAIWidget() {
       {/* Floating Chat Window - consumes marked place on right side */}
       {isAiOpen && (
         <div
-          className={`fixed bottom-[134px] right-3.5 sm:bottom-20 sm:right-6 md:right-8 z-50 flex flex-col overflow-hidden rounded-2xl border border-border/80 bg-background/95 shadow-2xl backdrop-blur-xl transition-all duration-200 w-[70vw] max-w-[315px] h-[380px] max-h-[50vh] ${
+          className={`fixed z-50 flex flex-col overflow-hidden rounded-2xl border border-border/80 bg-background/95 shadow-2xl backdrop-blur-xl transition-all duration-200 w-[calc(100vw-24px)] max-w-[360px] h-[480px] max-h-[72vh] bottom-[76px] right-3 sm:max-w-[calc(100vw-48px)] ${
             isDesktopExpanded
-              ? "sm:w-[680px] md:w-[760px] lg:w-[840px] sm:h-[720px] md:h-[780px] lg:h-[840px] sm:max-h-[90vh] md:max-h-[92vh]"
-              : "sm:w-[500px] md:w-[560px] lg:w-[600px] sm:h-[640px] md:h-[700px] lg:h-[740px] sm:max-h-[85vh] md:max-h-[88vh]"
+              ? "sm:bottom-6 sm:right-6 md:right-8 sm:w-[760px] md:w-[860px] lg:w-[960px] sm:h-[calc(100vh-100px)] sm:max-h-[860px]"
+              : "sm:bottom-20 sm:right-6 md:right-8 sm:w-[580px] md:w-[640px] lg:w-[700px] sm:h-[660px] md:h-[700px] lg:h-[740px] sm:max-h-[calc(100vh-140px)]"
           }`}
         >
           {/* Header */}

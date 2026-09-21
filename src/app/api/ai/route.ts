@@ -267,6 +267,7 @@ export async function POST(req: NextRequest) {
 
     // ── 5. Check NVIDIA API key ────────────────────────────────────────
     const nvidiaApiKey = process.env.NVIDIA_API_KEY;
+    const nvidiaModel = process.env.NVIDIA_MODEL || "nvidia/llama-3.1-nemotron-70b-instruct";
 
     if (!nvidiaApiKey) {
       return NextResponse.json(
@@ -357,7 +358,7 @@ ${abnormalAlerts.length > 0 ? `- Active Alerts: ${JSON.stringify(abnormalAlerts)
             Authorization: `Bearer ${nvidiaApiKey}`,
           },
           body: JSON.stringify({
-            model: "meta/llama-3.2-11b-vision-instruct",
+            model: nvidiaModel,
             messages: conversationMessages,
             temperature: 0.3,
             max_tokens: 400,
@@ -372,8 +373,11 @@ ${abnormalAlerts.length > 0 ? `- Active Alerts: ${JSON.stringify(abnormalAlerts)
 
     // If upstream service is unavailable or returns an error status, use high-fidelity telemetry fallback
     if (!upstreamResponse || !upstreamResponse.ok) {
-      const errText = upstreamResponse ? await upstreamResponse.text().catch(() => "") : "";
-      console.warn(`AI upstream service error (${upstreamResponse?.status}): ${errText}`);
+      let errText = "";
+      try {
+        errText = upstreamResponse ? await upstreamResponse.text() : "";
+      } catch { /* body may already be consumed */ }
+      console.warn(`AI upstream service error (${upstreamResponse?.status}), model=${nvidiaModel}: ${errText}`);
       const fallbackReply = generateTelemetryFallback(prompt || "", telemetrySnapshot);
       return createFallbackStream(fallbackReply);
     }
