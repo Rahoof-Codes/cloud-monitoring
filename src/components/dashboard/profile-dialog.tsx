@@ -258,7 +258,7 @@ export function ProfileDialog({ open, onOpenChange }: ProfileDialogProps) {
               /* Not yet linked */
               <div className="space-y-3 pt-1">
                 <p className="text-xs text-muted-foreground">
-                  Link your mobile phone number to enable SMS OTP sign-in and multi-factor recovery.
+                  Link your mobile phone number to enable SMS OTP sign-in and multiple sign-in options (Google, Email, Phone OTP).
                 </p>
 
                 {step === "input" ? (

@@ -9,7 +9,7 @@
 
 Modern cloud operations require infrastructure dashboards to deliver **high-density telemetry without cognitive overload**. The previous monolithic design placed all charts, provisioning forms, alerts, files, and threshold configurations on a single scrolling page. 
 
-The **CloudWatch Pro redesign** decouples this into an **8-page modular architecture**, where each domain has a dedicated viewport while sharing global real-time telemetry state via a persistent React Context (`DashboardProvider`) inside `src/app/dashboard/layout.tsx`.
+The **CloudWatch Pro redesign** decouples this into a **9-page modular architecture**, where each domain has a dedicated viewport while sharing global real-time telemetry state via a persistent React Context (`DashboardProvider`) inside `src/app/dashboard/layout.tsx`.
 
 ```
                         ┌────────────────────────────────────────┐
@@ -141,7 +141,7 @@ The **CloudWatch Pro redesign** decouples this into an **8-page modular architec
 
 ---
 
-### Page 8: Help (`/dashboard/help`) — Engineering & Redesign Reference
+### Page 9: Help (`/dashboard/help`) — Engineering & Redesign Reference
 * **Design Goal:** In-app operational reference and architecture guide.
 * **Core Capabilities:**
   * Metric mathematical formulas and sampling rates.
@@ -153,7 +153,7 @@ The **CloudWatch Pro redesign** decouples this into an **8-page modular architec
 ## 3. Data Architecture & Telemetry Pipeline
 
 ### Telemetry State Engine (`src/components/dashboard/dashboard-provider.tsx`)
-All 8 pages inherit global state from `<DashboardProvider>`:
+All 9 pages inherit global state from `<DashboardProvider>`:
 1. **Resources Store:** Synchronized in real-time with Firestore collection `/users/{uid}/resources`.
 2. **Telemetry History Map:** Ring buffer preserving the last 30 samples per resource.
 3. **Simulation Drift:** Every interval (5s – 30s), running instances simulate slight metric variation within healthy boundaries.

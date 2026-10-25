@@ -213,15 +213,15 @@ CLOUDWATCH_API_ENDPOINT=${endpoint}`;
           <CardContent className="p-4">
             <div className="flex items-center justify-between">
               <span className="text-xs font-medium text-muted-foreground">
-                KMS Cryptography
+                KMS Security Posture
               </span>
               <Lock className="h-4 w-4 text-emerald-500" />
             </div>
-            <div className="mt-2 text-base font-bold text-emerald-600 dark:text-emerald-400 font-mono">
-              AES-256 GCM
+            <div className="mt-2 text-sm font-bold text-emerald-600 dark:text-emerald-400 font-mono">
+              simulated KMS-style credentials
             </div>
             <p className="mt-1 text-xs text-muted-foreground">
-              Envelope encryption active
+              Sample credentials, not valid for any real service
             </p>
           </CardContent>
         </Card>
@@ -300,7 +300,7 @@ CLOUDWATCH_API_ENDPOINT=${endpoint}`;
                 Resource API Credentials Inventory
               </CardTitle>
               <CardDescription className="text-xs">
-                Per-resource credentials for telemetry push, SDK automation, and RESTful telemetry ingestion
+                Per-resource credentials for telemetry push and SDK automation · <span className="font-medium text-amber-600 dark:text-amber-400">Sample credentials, not valid for any real service</span>
               </CardDescription>
             </div>
             <Badge variant="outline" className="text-xs font-mono">

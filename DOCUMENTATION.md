@@ -15,11 +15,14 @@
 6. [Hybrid Storage Architecture (Firestore + IndexedDB)](#6-hybrid-storage-architecture-firestore--indexeddb)
 7. [Predictable Billing Engine & Mathematics](#7-predictable-billing-engine--mathematics)
 8. [Real-Time Streaming AI Advisor Pipeline](#8-real-time-streaming-ai-advisor-pipeline)
-9. [Authentication & Multi-Factor Security Suite](#9-authentication--multi-factor-security-suite)
+9. [Authentication & Multiple Sign-In Options (Google, Email, Phone OTP)](#9-authentication--multiple-sign-in-options-google-email-phone-otp)
 10. [Database Schema & Security Rules](#10-database-schema--security-rules)
 11. [User Experience & Responsive Design](#11-user-experience--responsive-design)
 12. [Environment Configuration & Setup Guide](#12-environment-configuration--setup-guide)
 13. [Hackathon Demo & Pitch Presentation Script](#13-hackathon-demo--pitch-presentation-script)
+14. [Monitored Resources, Metric Definitions & Threshold Alert Configuration](#14-monitored-resources-metric-definitions--threshold-alert-configuration)
+15. [Cloud AI Copilot & IAM API Credentials Redesign](#15-cloud-ai-copilot--iam-api-credentials-redesign)
+16. [Limitations & Simulation Details](#16-limitations--simulation-details)
 
 ---
 
@@ -34,10 +37,10 @@ Modern cloud operations present major challenges for developers, startups, and D
 ### The Solution: Cloud Resource Monitor
 **Cloud Resource Monitor** is a unified, single-pane-of-glass cloud management platform combining:
 - **Instant Observability**: Real-time compute health metrics, CPU/memory telemetry, and instant anomaly alerting.
-- **Predictable Cost Transparency**: Transparent, flat-rate pricing (₹50/month per active compute instance, ₹2/GB storage, ₹0 for stopped instances) with automatic real-time billing recalculation.
+- **Predictable Cost Transparency**: Transparent, usage-based pricing grounded in AWS Mumbai (ap-south-1) on-demand rates (e.g. ₹0.85/hr for small VMs, ₹1.50/hr for databases, ₹2.00/hr for network ingress, and ₹2.00/GB per month for storage) with per-second billing and ₹0 for stopped instances.
 - **Grounded Streaming AI Advisor**: An integrated AI copilot powered by Meta Llama 3.2 on NVIDIA's AI infrastructure, connected via Server-Sent Events (SSE) with live telemetry grounding and a fluid word-by-word typewriter interface.
 - **Zero-Friction Hybrid Storage**: File management supporting files up to 200MB using a hybrid Firestore + browser IndexedDB architecture that eliminates cloud storage billing barriers for demos and prototypes.
-- **Enterprise-Grade Authentication**: Full multi-factor auth supporting Google OAuth, Email/Password, and SMS OTP verification with phone linking via Invisible reCAPTCHA.
+- **Authentication & Account Security**: Multiple sign-in options (Google OAuth, Email/Password, and SMS OTP verification) with mobile phone linking via Invisible reCAPTCHA.
 
 ---
 
@@ -48,13 +51,13 @@ Modern cloud operations present major challenges for developers, startups, and D
 | **Observability** | Live Compute Telemetry | Real-time tracking of VMs, Databases, and Networks with dynamic CPU/Memory status. |
 | **Observability** | Anomaly Detection | Automated alerting banner for resources with >80% CPU utilization or error states. |
 | **Observability** | Resource Controls | Instant Start/Stop and Delete actions with zero-latency Firestore synchronization. |
-| **Storage** | Hybrid File Storage | Small files (≤700KB) stored inline as base64; large files (>700KB up to 200MB) stored in IndexedDB with Firestore metadata sync. |
-| **FinOps** | Transparent Billing | Real-time bill calculations (₹50/active instance + ₹2/GB storage). Instant recalculation on status change. |
-| **FinOps** | Cost Visualizations | Recharts donut breakdown, monthly estimate cards, and capacity warnings. |
+| **Storage** | Hybrid File Storage | Small files (≤ 700 KB) stored inline as base64; large files (> 700 KB up to 200 MB) stored in IndexedDB with Firestore metadata sync. |
+| **FinOps** | Transparent Billing | Real-time bill calculations based on AWS Mumbai on-demand hourly rates + ₹2/GB storage, per-second tracking, and ₹0 for stopped instances. |
+| **FinOps** | Cost Visualizations | Recharts donut breakdown, monthly estimate cards, and daily cost history chart. |
 | **AI Advisor** | Grounded Telemetry | Injects live system metrics, anomaly lists, and active billing totals into every prompt context. |
 | **AI Advisor** | Streaming SSE | Fluid word-by-word streaming using an adaptive typewriter buffer (18ms cadence, dynamic backlog acceleration). |
 | **AI Advisor** | Multi-Turn Memory | Retains conversation history (up to 8 turns) and allows stopping generation on demand. |
-| **Security** | Multi-Factor Auth | Google OAuth + Email/Password + SMS OTP Phone verification via Firebase & Invisible reCAPTCHA. |
+| **Security** | Multiple Sign-In Options | Multiple sign-in options (Google, Email, Phone OTP) via Firebase & Invisible reCAPTCHA. |
 | **Security** | User Isolation | Strict Firestore Security Rules ensuring users can only read and write their own data tree (`request.auth.uid == uid`). |
 | **Design** | Responsive Layouts | Desktop multi-column dashboard + Mobile 3-section segmented navigation (Resources, Files, Billing) with floating AI assistant. |
 
@@ -190,19 +193,19 @@ Located in [`src/lib/useResources.ts`](file:///d:/Hackathon/cloud-dashboard/src/
 To mimic a production cloud environment without requiring real cloud provider credentials:
 - Every 5 seconds, an interval selects all non-stopped instances.
 - Applies jitter:
-  $$\Delta \text{CPU} = (\text{rand}() - 0.5) \times 8$$
-  $$\Delta \text{Mem} = (\text{rand}() - 0.5) \times 6$$
-- Metrics are clamped within $[0, 100]\%$.
+  `Delta CPU = (rand() - 0.5) * 8`
+  `Delta Mem = (rand() - 0.5) * 6`
+- Metrics are clamped within `[0, 100]%`.
 - **Automated State Transitions**:
-  - If CPU or Memory $> 90\%$, instance status transitions to `warning`.
-  - When metrics stabilize below $85\%$, status reverts to `running`.
-  - If stopped, CPU and Memory drop to $0\%$.
+  - If CPU or Memory > 90%, instance status transitions to `warning`.
+  - When metrics stabilize below 85%, status reverts to `running`.
+  - If stopped, CPU and Memory drop to 0%.
 
 ### 3. Anomaly Auditing
 - `getAbnormalResources(resources)` evaluates:
-  - $\text{CPU Usage} > 85\%$ OR
-  - $\text{Memory Usage} > 85\%$ OR
-  - $\text{Status} \in \{\text{"warning"}, \text{"error"}\}$
+  - CPU Usage > 85% OR
+  - Memory Usage > 85% OR
+  - Status is "warning" or "error"
 - Detected resources immediately render into the [`AttentionPanel`](file:///d:/Hackathon/cloud-dashboard/src/components/dashboard/attention-panel.tsx) with a red pinging indicator and direct-drill action buttons.
 
 ---
@@ -217,12 +220,12 @@ Firestore has a strict **1MB document size limit**, and Firebase Cloud Storage r
 ### The Hybrid Storage Solution
 To enable seamless hackathon evaluations and demonstrations with real files up to **200MB**:
 
-1. **Small Files ($\le 700\text{ KB}$)**:
+1. **Small Files (≤ 700 KB)**:
    - Binary converted to Base64 Data URL via `FileReader`.
    - Stored directly inside the Firestore document at `/users/{uid}/files/{fileId}`.
    - Synchronized across devices.
 
-2. **Large Files ($> 700\text{ KB}$ up to $200\text{ MB}$)**:
+2. **Large Files (> 700 KB up to 200 MB)**:
    - Binary stored safely in the browser's local **IndexedDB** (`CloudMonitorStore` / `blobs` object store).
    - Full metadata (filename, size in bytes, MIME type, upload timestamp, `isLocalBlob: true`) is stored in Cloud Firestore.
    - User document `totalStorageUsedBytes` is recalculated and stored in Firestore.
@@ -232,25 +235,34 @@ To enable seamless hackathon evaluations and demonstrations with real files up t
 
 ## 7. Predictable Billing Engine & Mathematics
 
-Located in [`src/lib/cost.ts`](file:///d:/Hackathon/cloud-dashboard/src/lib/cost.ts) and [`src/components/dashboard/billing-tab.tsx`](file:///d:/Hackathon/cloud-dashboard/src/components/dashboard/billing-tab.tsx).
+Located in [`src/lib/pricing.ts`](file:///d:/Hackathon/cloud-dashboard/src/lib/pricing.ts), [`src/lib/billing.ts`](file:///d:/Hackathon/cloud-dashboard/src/lib/billing.ts), and [`src/components/dashboard/billing-tab.tsx`](file:///d:/Hackathon/cloud-dashboard/src/components/dashboard/billing-tab.tsx).
 
 ### Transparent Pricing Formula
 
-$$\text{Estimated Monthly Cost (₹)} = (\text{Running Instances} \times ₹50) + \left(\frac{\text{Total Storage Bytes}}{10^9} \times ₹2\right)$$
+```
+Total Monthly Bill (₹) = Σ (Running Seconds × Hourly Rate / 3600) + (Storage Used in GB × ₹2.00)
+```
+
+### AWS Mumbai (ap-south-1) Rate Card
+1. **Compute Instances (VM)**: Small (t3.micro) ₹0.85/hr, Medium (t3.medium) ₹3.40/hr, Large (m6i.large) ₹8.00/hr.
+2. **Managed Databases**: Small (db.t3.micro) ₹1.50/hr, Medium (db.t3.medium) ₹6.00/hr, Large (db.m6i.large) ₹12.00/hr.
+3. **Network Services**: Application Load Balancer / NLB / CDN ₹2.00/hr.
+4. **Cloud Storage Buckets**: Standard Bucket ₹0.50/hr, SSD Pool ₹1.50/hr, Multi-Region ₹3.50/hr.
+5. **Serverless Functions**: Micro ₹0.30/hr, Standard ₹1.00/hr, Container ₹2.50/hr.
+6. **Object Storage**: ₹2.00 per GB per month (calculated down to fractional bytes and rounded to paisa).
 
 ### Key Financial Rules
-1. **Flat Compute Rate**: ₹50/month per active (`running`) instance.
-2. **Zero-Cost Inactivity**: Stopped resources incur **₹0/month** compute cost. This gives users immediate incentive to shut down idle resources.
-3. **Storage Rate**: ₹2 per GB per month (calculated down to fractional bytes and rounded to paisa).
-4. **Soft Free Tier Cap**: 1 GB ($1 \times 1024^3$ bytes). The system warns users when storage usage exceeds 80% of this threshold.
+1. **Per-Second Granularity**: Compute charges accrue strictly by running duration in seconds, with a 60-second minimum charge window (`MIN_BILLABLE_SECONDS = 60`).
+2. **Zero-Cost Inactivity**: Stopped resources incur **₹0.00/hr** compute cost. This provides immediate incentive to shut down idle resources.
+3. **Persistent Usage Audit Trail**: When a resource is stopped or deleted, its accrued usage sessions remain captured in Firestore and the monthly bill.
+4. **Soft Free Tier Cap**: 1 GB (1,073,741,824 bytes). The system warns users when storage usage exceeds 80% of this threshold.
 
-### Example Cost Calculation
-- 3 Running Instances: $3 \times ₹50 = ₹150$
-- 2 Stopped Instances: $2 \times ₹0 = ₹0$
-- 2.5 GB Uploaded Files: $2.5 \times ₹2 = ₹5.00$
-- **Total Monthly Bill**: **₹155.00**
+### Worked Example Calculation
+- Run a **Small VM (t3.micro @ ₹0.85/hr)** for **3 hours**: 3 hours × ₹0.85/hr = ₹2.55 compute fee.
+- Store **10 GB** of log files: 10 GB × ₹2.00/GB = ₹20.00 storage fee.
+- **Total Monthly Invoice**: ₹2.55 + ₹20.00 = **₹22.55**.
 
-Whenever a resource is stopped, started, or a file is deleted, `recalcCost()` recalculates this value and updates the user's Firestore profile document.
+Whenever a resource is stopped, started, or a file is deleted, `calculateMonthlyBill()` recalculates this value and updates the user's Firestore profile document.
 
 ---
 
@@ -314,7 +326,7 @@ The AI advisor does not guess. Every request bundles the user's real-time infras
 
 ---
 
-## 9. Authentication & Multi-Factor Security Suite
+## 9. Authentication & Multiple Sign-In Options (Google, Email, Phone OTP)
 
 Located in [`src/lib/useAuth.ts`](file:///d:/Hackathon/cloud-dashboard/src/lib/useAuth.ts), [`src/app/login/page.tsx`](file:///d:/Hackathon/cloud-dashboard/src/app/login/page.tsx), and [`src/components/dashboard/profile-dialog.tsx`](file:///d:/Hackathon/cloud-dashboard/src/components/dashboard/profile-dialog.tsx).
 
@@ -380,7 +392,7 @@ service cloud.firestore {
 
 ## 11. User Experience & Responsive Design
 
-### Desktop Layout ($\ge 768\text{px}$)
+### Desktop Layout (≥ 768px)
 - **Sticky Top Bar**: Brand logo, theme toggle (light/dark), user avatar, and profile dropdown.
 - **Attention Panel**: Alert banner automatically rendering active anomalies (>80% CPU).
 - **Summary KPI Cards**: Quick overview of Total Resources, Active Anomalies, Storage Footprint, and Estimated Monthly Bill.
@@ -393,7 +405,7 @@ service cloud.firestore {
   - **Billing**: Cost summary cards, pricing formula breakdown, and storage vs. compute donut chart.
 - **Docked AI Assistant**: Floating bottom-right action button expanding into a full chat drawer with quick prompt pills, copy-to-clipboard, stop generation, and auto-scroll.
 
-### Mobile Layout ($< 768\text{px}$)
+### Mobile Layout (< 768px)
 - **Segmented Top Bar**: Dedicated 3-section switch (Resources, Files, Billing) with badge counts.
 - **Optimized Touch Targets**: Cards adapted for single-column touch interaction.
 - **Compact Floating AI**: Ergonomic round floating button with badge counter that opens an optimized modal dialog.
@@ -412,7 +424,7 @@ service cloud.firestore {
 ```bash
 # Clone the repository
 git clone https://github.com/Rahoof-Codes/Cloud-Resource-Monitoring-Dashboard.git
-cd cloud-dashboard
+cd Cloud-Resource-Monitoring-Dashboard
 
 # Install dependencies
 npm install
@@ -452,9 +464,9 @@ Open [http://localhost:3000](http://localhost:3000) in your browser.
 ### 2-Minute Elevator Pitch
 > *"Judges, cloud infrastructure management today is broken. Small teams and developers are blindsided by unexpected AWS or GCP bills, forced to juggle multiple dashboards, and disconnected from actionable AI.  
 > We built **Cloud Resource Monitor** — a next-generation observability dashboard that brings sanity back to the cloud.  
-> It features a 100% predictable pricing model: ₹50 per running instance, ₹2 per GB of storage, and ₹0 for idle instances. With live Firestore reactivity, users see metrics update in real time.  
+> It features a 100% predictable pricing model grounded in AWS Mumbai (ap-south-1) on-demand hourly pricing (e.g. ₹0.85 to ₹8.00/hr compute, ₹2.00/GB per month storage) with per-second billing and ₹0 for idle instances. With live Firestore reactivity, users see metrics update in real time.  
 > When a spike occurs, our integrated **AI Cloud Advisor**, powered by Llama 3.2 and streaming over Server-Sent Events, doesn't just give generic answers — it inspects real-time telemetry and diagnoses the bottleneck on the spot.  
-> Paired with hybrid client-side storage supporting files up to 200MB and complete multi-factor authentication, Cloud Resource Monitor is the observability platform developers actually want to use."*
+> Paired with hybrid client-side storage supporting files up to 200MB and multiple sign-in options (Google, Email, Phone OTP), Cloud Resource Monitor is the observability platform developers actually want to use."*
 
 ### 3-Minute Live Demo Walkthrough
 
@@ -467,7 +479,7 @@ Open [http://localhost:3000](http://localhost:3000) in your browser.
    - Click the instance to open the **Resource Detail Sheet**, then toggle its status from "Running" to "Stopped".
 3. **Predictable Billing in Action (45s)**:
    - Navigate to the **Billing** tab.
-   - Highlight how stopping the instance immediately dropped compute charges by ₹50 in real time.
+   - Highlight how stopping the instance immediately halts compute charges in real time.
    - Upload a test file (document or image) and show the storage bill recalculating live down to the paisa.
 4. **Grounded AI Advisor (60s)**:
    - Click the floating **Ask AI** button in the bottom right.
@@ -491,53 +503,53 @@ Open [http://localhost:3000](http://localhost:3000) in your browser.
 ### 14.2 Metric Definitions & Formulas
 
 1. **CPU Utilization (%)**:
-   $$\text{CPU Usage} = \frac{\text{Active vCPU Execution Cycles}}{\text{Total Available Clock Cycles}} \times 100$$
-   Sampled continuously every 5 seconds. Triggers Warning at $>80\%$ and Critical at $\ge 90\%$.
+   `CPU Usage (%) = (Active vCPU Execution Cycles / Total Available Clock Cycles) * 100`  
+   Sampled continuously every 5 seconds. Triggers Warning at > 80% and Critical at ≥ 90%.
 
 2. **Memory Utilization (%)**:
-   $$\text{RAM Consumption} = \frac{\text{Allocated Physical RAM (MB)}}{\text{Total Provisioned RAM (MB)}} \times 100$$
+   `RAM Consumption (%) = (Allocated Physical RAM in MB / Total Provisioned RAM in MB) * 100`  
    Monitored to prevent out-of-memory kernel kills on container hosts and database instances.
 
 3. **Storage Capacity (%)**:
-   $$\text{Storage Usage} = \frac{\text{Used Disk / Partition Blocks}}{\text{Total Provisioned Volume Quota}} \times 100$$
+   `Storage Usage (%) = (Used Disk or Partition Blocks / Total Provisioned Volume Quota) * 100`  
    Encompasses local compute block storage volumes as well as cloud-uploaded object storage files.
 
 4. **Network Bandwidth Throughput (MB/s)**:
-   $$\text{Network Bandwidth} = \frac{\text{Inbound Bytes} + \text{Outbound Bytes}}{\text{Sample Duration (Seconds)} \times 1024 \times 1024}$$
+   `Network Bandwidth (MB/s) = (Inbound Bytes + Outbound Bytes) / (Sample Duration in Seconds * 1024 * 1024)`  
    Measures ingress and egress data transfer velocity across virtual network interfaces.
 
 5. **Request Count Rate (req/s)**:
-   $$\text{Request Rate} = \frac{\Delta \text{HTTP(S) Ingress Requests}}{\Delta t \text{ (seconds)}}$$
+   `Request Rate (req/s) = Ingress Requests / Sample Duration in Seconds`  
    Monitors application throughput and detects sudden denial-of-service or bot traffic surges.
 
 ### 14.3 Usage Thresholds & Alert Configuration
 
 The alerting engine monitors telemetry against custom, user-configurable thresholds:
-- **CPU Threshold**: Default $80\%$ (configurable between $40\%$ and $95\%$).
-- **Memory Threshold**: Default $80\%$ (configurable between $40\%$ and $95\%$).
-- **Storage Threshold**: Default $85\%$ (configurable between $50\%$ and $98\%$).
-- **Network Threshold**: Default $60\text{ MB/s}$ (configurable between $20\text{ MB/s}$ and $150\text{ MB/s}$).
-- **Request Rate Threshold**: Default $1200\text{ req/s}$ (configurable between $400\text{ req/s}$ and $3000\text{ req/s}$).
-- **Anti-Flapping Window**: Requires $N$ consecutive samples (default: 2 consecutive samples) exceeding the threshold before an alert is dispatched, eliminating false positives caused by momentary spikes.
+- **CPU Threshold**: Default 80% (configurable between 40% and 95%).
+- **Memory Threshold**: Default 80% (configurable between 40% and 95%).
+- **Storage Threshold**: Default 85% (configurable between 50% and 98%).
+- **Network Threshold**: Default 60 MB/s (configurable between 20 MB/s and 150 MB/s).
+- **Request Rate Threshold**: Default 1200 req/s (configurable between 400 req/s and 3000 req/s).
+- **Anti-Flapping Window**: Requires N consecutive samples (default: 2 consecutive samples) exceeding the threshold before an alert is dispatched, eliminating false positives caused by momentary spikes.
 - **Incident Lifecycle**: Supports alert acknowledgement (`ACK`) and resolution (`RESOLVED`) tracking.
 
 ### 14.4 Cloud Platform Monitoring Service Configuration
 
 Users can connect to or simulate real cloud platforms:
-- **Amazon CloudWatch**: Direct integration with AWS Mumbai (`ap-south-1`) CloudWatch metrics and alarms.
-- **Google Cloud Monitoring**: Telemetry collection for GCP projects.
-- **Azure Monitor**: Virtual machine and application telemetry.
-- **Prometheus / OpenTelemetry**: Standard multi-cloud metric scraping.
+- **Amazon CloudWatch**: Direct integration with AWS Mumbai (`ap-south-1`) CloudWatch metrics and alarms (simulated integration).
+- **Google Cloud Monitoring**: Telemetry collection for GCP projects (simulated integration).
+- **Azure Monitor**: Virtual machine and application telemetry (simulated integration).
+- **Prometheus / OpenTelemetry**: Standard multi-cloud metric scraping (simulated integration).
 - **Configurable Frequencies**: 5s (Real-Time), 10s (Fast), 30s (Standard), 60s (Eco Mode), or Paused.
 
 ### 14.5 Controlled Threshold Alert Demonstration Suite
 
 To demonstrate alerting mechanisms during presentations or tests, the dashboard provides a **Controlled Test Dialog**:
-1. **CPU Spike**: Injects $95\%$ CPU on an active instance; immediately triggers the threshold alert banner, fires a toast notification with an **Inspect** action, and adds red threshold breach markers on the time-series chart.
-2. **Network Bandwidth Surge**: Injects $88.5\text{ MB/s}$ to demonstrate ingress bandwidth alerting.
-3. **Storage Warning**: Injects $94\%$ volume utilization to demonstrate disk capacity exhaustion alerts.
-4. **Traffic Flood**: Injects $2450\text{ req/s}$ to simulate DDoS or high-concurrency alert escalation.
-5. **Restore Baseline**: Restores fleet metrics to healthy baseline ($35\%$ CPU, $12\text{ MB/s}$).
+1. **CPU Spike**: Injects 95% CPU on an active instance; immediately triggers the threshold alert banner, fires a toast notification with an **Inspect** action, and adds red threshold breach markers on the time-series chart.
+2. **Network Bandwidth Surge**: Injects 88.5 MB/s to demonstrate ingress bandwidth alerting.
+3. **Storage Warning**: Injects 94% volume utilization to demonstrate disk capacity exhaustion alerts.
+4. **Traffic Flood**: Injects 2450 req/s to simulate DDoS or high-concurrency alert escalation.
+5. **Restore Baseline**: Restores fleet metrics to healthy baseline (35% CPU, 12 MB/s).
 
 ### 14.6 Dual Display Modes: Grid & Tabular Monitoring View
 
@@ -563,7 +575,7 @@ The conversational AI engine has been expanded from a corner popover into a dedi
 ### 15.2 Fleet API Credentials & IAM Security (`/dashboard/resources` & Inspection Drawer)
 Resource credentials have been redesigned with enterprise-grade security posture controls:
 - **API Keys & IAM Tab**: A dedicated sub-view in the Resources page providing fleet-wide key visibility.
-- **KMS Cryptographic Status**: Highlights envelope encryption (`AES-256 GCM`) and 90-day rotation compliance.
+- **KMS Security Posture**: Highlights simulated KMS-style credentials with visible sample disclaimer (`Sample credentials, not valid for any real service`) and 90-day rotation compliance.
 - **Fleet Key Inventory Table**:
   - Masked / Revealable Access Key ID and Secret Access Key.
   - IAM Permission Scopes (`telemetry:push`, `metrics:read`, `s3:read-write`, `compute:manage`).
@@ -571,5 +583,14 @@ Resource credentials have been redesigned with enterprise-grade security posture
   - One-click Key Rotation with instant cryptographic regeneration and toast feedback.
 - **Interactive SDK Quickstart Generator**: Generates executable, copy-pasteable snippets for **cURL**, **Python (boto3 / requests)**, **Node.js (AWS SDK v3)**, and `.env` format.
 - **Redesigned Resource Detail Sheet**: Overhauled API Credentials card with status badges, regional endpoint copy, and granular permission tags.
+
+---
+
+## 16. Limitations & Simulation Details
+
+### Client-Side Telemetry Drift Simulation
+- **Simulated Metrics**: The real-time telemetry updates for compute instances (CPU utilization, memory allocation, network traffic, storage capacity, and request rates) are generated using a client-side synthetic drift engine with realistic jitter. This enables complete demonstration of alerting, threshold detection, and AI diagnostics without requiring live AWS/GCP cloud provider credentials.
+- **Simulated Provider Integrations**: The provider selector (AWS CloudWatch, Google Cloud Monitoring, Azure Monitor, Prometheus) demonstrates architectural interchangeability and telemetry ingestion config. In a production deployment, this is replaced by server-side CloudWatch SDK clients (`@aws-sdk/client-cloudwatch`) fetching `GetMetricData`.
+- **Sample API Credentials**: The Access Key IDs and Secret Access Keys displayed under the API Keys tab and Resource Detail Sheet are simulated sample credentials formatted to illustrate KMS security posture and SDK automation snippets. They are not active keys on any real cloud provider.
 
 

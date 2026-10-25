@@ -40,6 +40,9 @@ export default function MetricsPage() {
           <Badge variant="outline" className="text-xs">
             Multi-Metric Pipeline
           </Badge>
+          <Badge variant="secondary" className="text-xs bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20">
+            Simulated metrics
+          </Badge>
         </div>
         <p className="text-xs text-muted-foreground mt-0.5">
           Real-time time-series telemetry streams, metric distribution, and utilization patterns across compute, storage, and networking.

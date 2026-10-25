@@ -85,7 +85,7 @@ export default function HelpPage() {
                     Memory Utilization
                   </td>
                   <td className="px-4 py-3 font-mono text-muted-foreground">%</td>
-                  <td className="px-4 py-3 font-mono text-rose-500 font-bold">&gt; 85%</td>
+                  <td className="px-4 py-3 font-mono text-rose-500 font-bold">&gt; 80%</td>
                   <td className="px-4 py-3 font-mono text-[11px] text-muted-foreground">
                     (Total_RAM - Available_RAM) / Total_RAM × 100
                   </td>
@@ -98,7 +98,7 @@ export default function HelpPage() {
                     Storage Capacity
                   </td>
                   <td className="px-4 py-3 font-mono text-muted-foreground">%</td>
-                  <td className="px-4 py-3 font-mono text-rose-500 font-bold">&gt; 90%</td>
+                  <td className="px-4 py-3 font-mono text-rose-500 font-bold">&gt; 85%</td>
                   <td className="px-4 py-3 font-mono text-[11px] text-muted-foreground">
                     (Allocated_Bytes - Free_Bytes) / Volume_Quota × 100
                   </td>
@@ -111,7 +111,7 @@ export default function HelpPage() {
                     Network Throughput
                   </td>
                   <td className="px-4 py-3 font-mono text-muted-foreground">MB/s</td>
-                  <td className="px-4 py-3 font-mono text-rose-500 font-bold">&gt; 50 MB/s</td>
+                  <td className="px-4 py-3 font-mono text-rose-500 font-bold">&gt; 60 MB/s</td>
                   <td className="px-4 py-3 font-mono text-[11px] text-muted-foreground">
                     (Bytes_In + Bytes_Out) / Interval_Seconds / 1,048,576
                   </td>
@@ -124,7 +124,7 @@ export default function HelpPage() {
                     Request Count
                   </td>
                   <td className="px-4 py-3 font-mono text-muted-foreground">req/s</td>
-                  <td className="px-4 py-3 font-mono text-rose-500 font-bold">&gt; 1,000 req/s</td>
+                  <td className="px-4 py-3 font-mono text-rose-500 font-bold">&gt; 1,200 req/s</td>
                   <td className="px-4 py-3 font-mono text-[11px] text-muted-foreground">
                     Total_HTTP_Requests / Sample_Interval_Seconds
                   </td>
@@ -206,7 +206,7 @@ export default function HelpPage() {
             {openSection === "routes" && (
               <div className="p-3.5 border-t border-border/40 text-muted-foreground space-y-2 bg-card">
                 <p>
-                  Instead of crowding all functionality into a single monolithic view, the application is decoupled into 8 specialized routes:
+                  Instead of crowding all functionality into a single monolithic view, the application is decoupled into 9 specialized routes:
                 </p>
                 <ul className="list-disc pl-5 space-y-1">
                   <li><strong>/dashboard</strong>: Executive overview (Overall Summary, health score, primary CPU chart, quick monitored resources table matching CloudWatch Pro Figure B.2).</li>
@@ -214,6 +214,7 @@ export default function HelpPage() {
                   <li><strong>/dashboard/metrics</strong>: Multi-metric telemetry graphs, time-range selectors (15m, 1h, 6h, 24h), and resource telemetry matrices.</li>
                   <li><strong>/dashboard/thresholds</strong>: Visual sliders for CPU, Memory, Disk, Network, and Requests, with consecutive breach dampening.</li>
                   <li><strong>/dashboard/alerts</strong>: Active and resolved incidents, AI copilot triage, and the 1-click Controlled Test suite.</li>
+                  <li><strong>/dashboard/ai</strong>: Dedicated full-screen AI Copilot Studio with real-time telemetry-grounded diagnostics and runbooks.</li>
                   <li><strong>/dashboard/history</strong>: Immutable audit ledger of events, alarms, and resolutions with JSON export.</li>
                   <li><strong>/dashboard/settings</strong>: Monitoring provider selection (AWS, GCP, Azure, Prometheus), polling interval, and API keys.</li>
                   <li><strong>/dashboard/help</strong>: In-app documentation and metric engineering guide.</li>

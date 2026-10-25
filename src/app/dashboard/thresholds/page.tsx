@@ -74,6 +74,9 @@ export default function ThresholdsPage() {
             <Badge variant="outline" className="text-xs">
               Rule Engine Active
             </Badge>
+            <Badge variant="secondary" className="text-xs bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20">
+              Simulated metrics
+            </Badge>
           </div>
           <p className="text-xs text-muted-foreground mt-0.5">
             Configure metric warning limits and evaluation criteria to trigger automatic alarms and prevent performance degradation.

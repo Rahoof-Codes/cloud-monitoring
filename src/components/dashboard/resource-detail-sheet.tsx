@@ -462,12 +462,17 @@ export function ResourceDetailSheet() {
                   </div>
 
                   {/* Status Banner */}
-                  <div className="flex items-center justify-between rounded-lg border border-border/50 bg-background/50 px-2.5 py-1.5 text-[11px]">
-                    <span className="text-muted-foreground">Encryption Status</span>
-                    <span className="inline-flex items-center gap-1 font-mono font-medium text-emerald-600 dark:text-emerald-400">
-                      <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
-                      AES-256 (Cloud KMS)
-                    </span>
+                  <div className="space-y-1">
+                    <div className="flex items-center justify-between rounded-lg border border-border/50 bg-background/50 px-2.5 py-1.5 text-[11px]">
+                      <span className="text-muted-foreground">Credential Posture</span>
+                      <span className="inline-flex items-center gap-1 font-mono font-medium text-amber-600 dark:text-amber-400">
+                        <span className="h-1.5 w-1.5 rounded-full bg-amber-500" />
+                        simulated KMS-style credentials
+                      </span>
+                    </div>
+                    <p className="text-[10px] text-muted-foreground/75 italic px-1">
+                      Sample credentials, not valid for any real service
+                    </p>
                   </div>
 
                   {/* Access Key */}

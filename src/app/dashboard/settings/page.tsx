@@ -128,12 +128,19 @@ export default function SettingsPage() {
         <div className="lg:col-span-2 space-y-5">
           <Card className="shadow-sm">
             <CardHeader className="pb-3 border-b border-border/40">
-              <CardTitle className="text-sm font-semibold tracking-tight">
-                Cloud Monitoring Provider
-              </CardTitle>
-              <CardDescription className="text-xs">
-                Select the telemetry ingestion engine used to gather fleet metrics
-              </CardDescription>
+              <div className="flex items-center justify-between">
+                <div>
+                  <CardTitle className="text-sm font-semibold tracking-tight">
+                    Cloud Monitoring Provider
+                  </CardTitle>
+                  <CardDescription className="text-xs">
+                    Select the telemetry ingestion engine used to gather fleet metrics
+                  </CardDescription>
+                </div>
+                <Badge variant="secondary" className="text-[10px] bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20">
+                  simulated integration
+                </Badge>
+              </div>
             </CardHeader>
             <CardContent className="pt-4 space-y-3">
               {[

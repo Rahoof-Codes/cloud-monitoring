@@ -9,8 +9,8 @@
 
 ## 🚀 Key Highlights & Expected Features
 
-- **Multi-Resource Cloud Observability**: Monitor Compute Instances (VMs), Managed Databases, Ingress Network Load Balancers, Cloud Storage Buckets, and Serverless Functions with live status badges and telemetry drift.
-- **Configurable Cloud Platform Monitoring**: Select between **Amazon CloudWatch**, **Google Cloud Monitoring**, **Azure Monitor**, and **Prometheus/OpenTelemetry**, with configurable collection frequencies (5s Real-time, 10s, 30s, 60s, or Paused).
+- **Multi-Resource Cloud Observability**: Monitor Compute Instances (VMs), Managed Databases, Ingress Network Load Balancers, Cloud Storage Buckets, and Serverless Functions with live status badges and simulated telemetry drift.
+- **Configurable Cloud Platform Monitoring**: Select between **Amazon CloudWatch**, **Google Cloud Monitoring**, **Azure Monitor**, and **Prometheus/OpenTelemetry** (simulated integration), with configurable collection frequencies (5s Real-time, 10s, 30s, 60s, or Paused).
 - **Comprehensive Multi-Metric Telemetry**: Continuous streaming observability for:
   - **CPU Utilization (%)**
   - **Memory Allocation (%)**
@@ -36,7 +36,7 @@
 - **Framework**: Next.js 16 (App Router), React 19, TypeScript
 - **Styling & UI**: Tailwind CSS v4, Lucide Icons, Sonner Notifications
 - **Visualizations**: Recharts (Multi-Metric Area Time-Series, Donut Distribution, FinOps Breakdown)
-- **Backend & Auth**: Firebase Authentication, Cloud Firestore (Real-Time `onSnapshot`), Browser IndexedDB
+- **Backend & Auth**: Firebase Authentication (multiple sign-in options: Google, Email, Phone OTP), Cloud Firestore (Real-Time `onSnapshot`), Browser IndexedDB
 - **AI Infrastructure**: NVIDIA AI Foundation Endpoints (`meta/llama-3.2-11b-vision-instruct`) with streaming SSE
 - **Test Suite**: Native Node.js test runner (`node --test`) covering billing math and threshold detection logic
 
@@ -47,7 +47,7 @@
 ### 1. Clone & Install Dependencies
 ```bash
 git clone https://github.com/Rahoof-Codes/Cloud-Resource-Monitoring-Dashboard.git
-cd cloud-dashboard
+cd Cloud-Resource-Monitoring-Dashboard
 npm install
 ```
 

@@ -109,8 +109,11 @@ export function MonitoringConfigDialog({
               <Cloud className="h-5 w-5" />
             </div>
             <div>
-              <DialogTitle className="text-base font-semibold">
-                Configure Cloud Monitoring Service
+              <DialogTitle className="text-base font-semibold flex items-center gap-2">
+                <span>Configure Cloud Monitoring Service</span>
+                <Badge variant="secondary" className="text-[10px] bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20 font-normal">
+                  simulated integration
+                </Badge>
               </DialogTitle>
               <DialogDescription className="text-xs">
                 Select your cloud observability platform and configure metric collection frequencies.

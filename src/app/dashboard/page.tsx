@@ -125,10 +125,15 @@ export default function DashboardHomePage() {
       {/* ── Top Header matching Figure B.2: Overall Summary + Refresh Now ── */}
       <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight text-foreground">
-            Overall Summary
-          </h1>
-          <p className="text-xs text-muted-foreground">
+          <div className="flex items-center gap-2">
+            <h1 className="text-2xl font-bold tracking-tight text-foreground">
+              Overall Summary
+            </h1>
+            <Badge variant="secondary" className="text-xs bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20">
+              Simulated metrics
+            </Badge>
+          </div>
+          <p className="text-xs text-muted-foreground mt-0.5">
             Executive telemetry overview of provisioned cloud infrastructure
           </p>
         </div>
