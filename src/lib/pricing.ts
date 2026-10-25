@@ -10,7 +10,7 @@
 //   - Storage: ₹2.00/GB-month
 // ---------------------------------------------------------------------------
 
-export type ResourceType = "VM" | "Database" | "Network";
+export type ResourceType = "VM" | "Database" | "Network" | "Storage" | "Serverless";
 export type ResourceSize = "small" | "medium" | "large";
 
 export interface PricingTierDetails {
@@ -69,6 +69,40 @@ export const PRICING_TIERS: Record<ResourceType, Record<ResourceSize, PricingTie
       hourlyRate: 2.00,
       label: "Global Accelerator / CDN",
       specs: "Edge-accelerated regional routing",
+    },
+  },
+  Storage: {
+    small: {
+      hourlyRate: 0.50,
+      label: "Standard S3 / Cloud Bucket",
+      specs: "500 GB Provisioned, Standard Egress",
+    },
+    medium: {
+      hourlyRate: 1.50,
+      label: "High-Performance SSD Pool",
+      specs: "2 TB Provisioned, 3000 IOPS",
+    },
+    large: {
+      hourlyRate: 3.50,
+      label: "Multi-Region Distributed Bucket",
+      specs: "10 TB Provisioned, Cross-Region Sync",
+    },
+  },
+  Serverless: {
+    small: {
+      hourlyRate: 0.30,
+      label: "Micro Cloud Function",
+      specs: "128 MB RAM, 1M invocations included",
+    },
+    medium: {
+      hourlyRate: 1.00,
+      label: "Standard Lambda Worker",
+      specs: "512 MB RAM, Event-driven execution",
+    },
+    large: {
+      hourlyRate: 2.50,
+      label: "Containerized Serverless Task",
+      specs: "2048 MB RAM, Auto-scaling concurrency",
     },
   },
 };

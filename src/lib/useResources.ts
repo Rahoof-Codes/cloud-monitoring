@@ -36,6 +36,9 @@ export interface Resource {
   region: string;
   cpuUsage: number;
   memoryUsage: number;
+  storageUsage: number;
+  networkTraffic: number;
+  requestCount: number;
   hourlyRate: number;
   apiCredentials: ApiCredentials;
   createdAt: unknown;
@@ -96,6 +99,9 @@ export function useResources(uid: string | undefined) {
             region: data.region || "ap-south-1",
             cpuUsage: data.cpuUsage ?? 0,
             memoryUsage: data.memoryUsage ?? 0,
+            storageUsage: data.storageUsage ?? Math.round((data.memoryUsage ?? 35) * 0.7 + 20),
+            networkTraffic: data.networkTraffic ?? Number((Math.random() * 15 + 4).toFixed(1)),
+            requestCount: data.requestCount ?? Math.round(Math.random() * 320 + 50),
             hourlyRate: data.hourlyRate ?? getHourlyRate(type, size),
             apiCredentials: data.apiCredentials || generateFakeCredentials(),
             createdAt: data.createdAt,
@@ -218,12 +224,19 @@ export function useResources(uid: string | undefined) {
 
         const cpuDelta = (Math.random() - 0.5) * 8;
         const memDelta = (Math.random() - 0.5) * 6;
+        const storageDelta = (Math.random() - 0.5) * 1.5;
+        const netDelta = (Math.random() - 0.5) * 3;
+        const reqDelta = (Math.random() - 0.5) * 25;
+
         const cpuUsage = clamp(Math.round(r.cpuUsage + cpuDelta), 0, 100);
         const memoryUsage = clamp(Math.round(r.memoryUsage + memDelta), 0, 100);
+        const storageUsage = clamp(Math.round((r.storageUsage ?? 40) + storageDelta), 5, 99);
+        const networkTraffic = Math.max(0.1, Number(((r.networkTraffic ?? 12) + netDelta).toFixed(1)));
+        const requestCount = Math.max(0, Math.round((r.requestCount ?? 140) + reqDelta));
 
         let status: ResourceStatus = r.status;
-        if (cpuUsage > 90 || memoryUsage > 90) status = "warning";
-        else if (r.status === "warning" && cpuUsage < 85 && memoryUsage < 85) {
+        if (cpuUsage > 90 || memoryUsage > 90 || storageUsage > 92) status = "warning";
+        else if (r.status === "warning" && cpuUsage < 85 && memoryUsage < 85 && storageUsage < 85) {
           status = "running";
         }
 
@@ -231,6 +244,9 @@ export function useResources(uid: string | undefined) {
           await updateDoc(doc(db, "users", uid, "resources", r.id), {
             cpuUsage,
             memoryUsage,
+            storageUsage,
+            networkTraffic,
+            requestCount,
             status,
             lastUpdated: serverTimestamp(),
           });
@@ -266,8 +282,11 @@ export function useResources(uid: string | undefined) {
           size,
           region: data.region,
           status,
-          cpuUsage: Math.round(Math.random() * 60 + 10),
-          memoryUsage: Math.round(Math.random() * 50 + 20),
+          cpuUsage: Math.round(Math.random() * 50 + 15),
+          memoryUsage: Math.round(Math.random() * 45 + 25),
+          storageUsage: Math.round(Math.random() * 40 + 20),
+          networkTraffic: Number((Math.random() * 15 + 4).toFixed(1)),
+          requestCount: Math.round(Math.random() * 300 + 60),
           hourlyRate,
           apiCredentials,
           createdAt: serverTimestamp(),
@@ -307,6 +326,8 @@ export function useResources(uid: string | undefined) {
           status: newStatus,
           cpuUsage: newStatus === "stopped" ? 0 : Math.round(Math.random() * 40 + 10),
           memoryUsage: newStatus === "stopped" ? 0 : Math.round(Math.random() * 30 + 20),
+          networkTraffic: newStatus === "stopped" ? 0 : Number((Math.random() * 12 + 3).toFixed(1)),
+          requestCount: newStatus === "stopped" ? 0 : Math.round(Math.random() * 180 + 40),
           lastUpdated: serverTimestamp(),
         });
 

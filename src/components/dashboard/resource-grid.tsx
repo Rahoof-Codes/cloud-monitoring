@@ -1,11 +1,19 @@
 "use client";
 
+// ---------------------------------------------------------------------------
+// Resource Grid & Table View Component
+// ---------------------------------------------------------------------------
+
 import { useState } from "react";
 import {
   Plus,
   Server,
   Database,
   Wifi,
+  HardDrive,
+  Activity,
+  LayoutGrid,
+  Table as TableIcon,
 } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -28,9 +36,16 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { useDashboard, type Resource, type ResourceType, type ResourceStatus, type ResourceSize } from "./dashboard-provider";
+import {
+  useDashboard,
+  type Resource,
+  type ResourceType,
+  type ResourceStatus,
+  type ResourceSize,
+} from "./dashboard-provider";
 import { REGIONS } from "@/lib/useResources";
 import { getHourlyRate, PRICING_TIERS } from "@/lib/pricing";
+import { ResourceTable } from "./resource-table";
 
 // ── Helpers ─────────────────────────────────────────────────────────────────
 
@@ -43,6 +58,10 @@ function typeIcon(type: ResourceType) {
       return <Database className={cls} />;
     case "Network":
       return <Wifi className={cls} />;
+    case "Storage":
+      return <HardDrive className={cls} />;
+    case "Serverless":
+      return <Activity className={cls} />;
   }
 }
 
@@ -107,29 +126,29 @@ function AddResourceDialog() {
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger
-        className="inline-flex h-7 items-center gap-1.5 rounded-lg bg-primary px-2.5 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/80"
+        className="inline-flex h-7 items-center gap-1.5 rounded-lg bg-primary px-2.5 text-xs font-medium text-primary-foreground transition-colors hover:bg-primary/85"
       >
         <Plus className="h-3.5 w-3.5" />
         Add Resource
       </DialogTrigger>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>Add Resource</DialogTitle>
+          <DialogTitle>Provision Cloud Resource</DialogTitle>
           <DialogDescription>
-            Create a new simulated cloud resource with AWS Mumbai telemetry and on-demand pricing.
+            Create a new monitored resource with AWS Mumbai telemetry and continuous metric collection.
           </DialogDescription>
         </DialogHeader>
         <div className="space-y-4 py-2">
           {/* Name */}
           <div className="space-y-1.5">
             <label className="text-xs font-medium text-muted-foreground">
-              Name
+              Resource Name
             </label>
             <input
               type="text"
               value={name}
               onChange={(e) => setName(e.target.value)}
-              placeholder="e.g. web-prod-api"
+              placeholder="e.g. web-prod-api or s3-media-vault"
               className="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm outline-none ring-ring focus:ring-2"
             />
           </div>
@@ -137,7 +156,7 @@ function AddResourceDialog() {
           {/* Type */}
           <div className="space-y-1.5">
             <label className="text-xs font-medium text-muted-foreground">
-              Type
+              Resource Type
             </label>
             <Select
               value={type}
@@ -147,9 +166,11 @@ function AddResourceDialog() {
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="VM">VM (Compute Engine)</SelectItem>
-                <SelectItem value="Database">Database (Managed SQL/NoSQL)</SelectItem>
-                <SelectItem value="Network">Network (Load Balancer)</SelectItem>
+                <SelectItem value="VM">VM (Compute Engine / EC2)</SelectItem>
+                <SelectItem value="Database">Database (Managed PostgreSQL / Redis)</SelectItem>
+                <SelectItem value="Network">Network (Load Balancer / Ingress)</SelectItem>
+                <SelectItem value="Storage">Storage Service (S3 / Cloud Storage Bucket)</SelectItem>
+                <SelectItem value="Serverless">Serverless (Cloud Function / Lambda Worker)</SelectItem>
               </SelectContent>
             </Select>
           </div>
@@ -158,7 +179,7 @@ function AddResourceDialog() {
           <div className="space-y-1.5">
             <div className="flex items-center justify-between">
               <label className="text-xs font-medium text-muted-foreground">
-                Size Tier
+                Capacity / Size Tier
               </label>
               <span className="text-xs font-semibold text-emerald-600 dark:text-emerald-400">
                 ₹{currentRate.toFixed(2)}/hr
@@ -214,7 +235,7 @@ function AddResourceDialog() {
             Cancel
           </Button>
           <Button onClick={handleCreate} disabled={!name.trim() || isCreating}>
-            {isCreating ? "Creating…" : "Create"}
+            {isCreating ? "Provisioning…" : "Provision Resource"}
           </Button>
         </DialogFooter>
       </DialogContent>
@@ -225,22 +246,28 @@ function AddResourceDialog() {
 // ── Resource Card ───────────────────────────────────────────────────────────
 
 function ResourceCard({ resource }: { resource: Resource }) {
-  const { setSelectedResource } = useDashboard();
+  const { setSelectedResource, thresholds } = useDashboard();
+
+  const isCpuHigh = resource.cpuUsage > thresholds.cpu;
+  const isMemHigh = resource.memoryUsage > thresholds.memory;
+  const isStorageHigh = (resource.storageUsage ?? 0) > thresholds.storage;
 
   return (
     <button
       onClick={() => setSelectedResource(resource)}
-      className="group flex w-full flex-col gap-3 rounded-xl border border-border/60 bg-card p-4 text-left transition-all hover:border-primary/30 hover:shadow-md"
+      className="group relative flex w-full flex-col gap-3 rounded-[22px] border border-border/70 dark:border-white/10 bg-gradient-to-b from-card/90 via-card/70 to-card/50 dark:from-zinc-900/80 dark:to-zinc-950/80 p-4 text-left backdrop-blur-md shadow-xs transition-all duration-300 hover:border-primary/50 hover:shadow-[0_12px_32px_rgba(0,0,0,0.18),0_0_24px_rgba(59,130,246,0.12)] hover:-translate-y-0.5"
     >
       {/* Header */}
-      <div className="flex items-start justify-between">
-        <div className="flex items-center gap-2.5">
-          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-muted text-muted-foreground transition-colors group-hover:bg-primary/10 group-hover:text-primary">
+      <div className="flex items-start justify-between gap-2">
+        <div className="flex items-center gap-2.5 min-w-0">
+          <div className="flex h-9 w-9 items-center justify-center rounded-2xl bg-primary/10 text-primary border border-primary/20 shadow-2xs group-hover:scale-105 group-hover:bg-primary/15 transition-all shrink-0">
             {typeIcon(resource.type)}
           </div>
-          <div>
-            <p className="text-sm font-semibold leading-tight">{resource.name}</p>
-            <p className="text-xs text-muted-foreground flex items-center gap-1.5 flex-wrap">
+          <div className="min-w-0">
+            <p className="text-sm font-bold leading-tight text-foreground truncate">
+              {resource.name}
+            </p>
+            <p className="text-[11px] text-muted-foreground flex items-center gap-1.5 flex-wrap mt-0.5">
               <span>{resource.type}</span>
               <span>·</span>
               <span className="capitalize font-medium text-foreground/80">{resource.size || "small"}</span>
@@ -249,60 +276,104 @@ function ResourceCard({ resource }: { resource: Resource }) {
                 ₹{(resource.hourlyRate ?? getHourlyRate(resource.type, resource.size)).toFixed(2)}/hr
               </span>
               <span>·</span>
-              <span>{resource.region}</span>
+              <span className="truncate">{resource.region}</span>
             </p>
           </div>
         </div>
         <Badge
           variant={statusVariant(resource.status)}
-          className="flex items-center gap-1.5 text-[10px] uppercase tracking-wide"
+          className="flex items-center gap-1.5 text-[9.5px] uppercase font-bold tracking-wider rounded-full px-2.5 py-0.5 shrink-0"
         >
           {statusDot(resource.status)}
           {resource.status}
         </Badge>
       </div>
 
-      {/* Metrics */}
-      <div className="grid grid-cols-2 gap-3">
-        {/* CPU */}
-        <div>
-          <p className="text-[10px] uppercase tracking-wider text-muted-foreground">
-            CPU
-          </p>
+      {/* Metrics Row 1: CPU & Memory Capsules */}
+      <div className="grid grid-cols-2 gap-2.5 pt-0.5">
+        {/* CPU Capsule */}
+        <div className="p-2.5 rounded-2xl bg-muted/25 dark:bg-zinc-950/40 border border-border/40 transition-colors group-hover:border-border/60">
+          <div className="flex items-center justify-between text-[10px] uppercase font-semibold tracking-wider text-muted-foreground mb-1">
+            <span>CPU</span>
+            <span className="font-mono text-[9px] text-muted-foreground/70 bg-muted/60 px-1.5 py-0.2 rounded-full">
+              {thresholds.cpu}% limit
+            </span>
+          </div>
           <p
-            className={`text-lg font-bold tabular-nums ${
-              resource.cpuUsage > 85 ? "text-amber-500" : ""
+            className={`text-base font-bold tabular-nums tracking-tight ${
+              isCpuHigh ? "text-rose-500" : "text-foreground"
             }`}
           >
             {resource.cpuUsage}
             <span className="text-xs font-normal text-muted-foreground">%</span>
           </p>
-          <Progress value={resource.cpuUsage} className="mt-1 h-1" />
+          <Progress
+            value={resource.cpuUsage}
+            className={`mt-1.5 h-1.5 rounded-full ${isCpuHigh ? "[&>div]:bg-rose-500" : "[&>div]:bg-primary"}`}
+          />
         </div>
-        {/* Memory */}
-        <div>
-          <p className="text-[10px] uppercase tracking-wider text-muted-foreground">
-            Memory
-          </p>
+
+        {/* Memory Capsule */}
+        <div className="p-2.5 rounded-2xl bg-muted/25 dark:bg-zinc-950/40 border border-border/40 transition-colors group-hover:border-border/60">
+          <div className="flex items-center justify-between text-[10px] uppercase font-semibold tracking-wider text-muted-foreground mb-1">
+            <span>Memory</span>
+            <span className="font-mono text-[9px] text-muted-foreground/70 bg-muted/60 px-1.5 py-0.2 rounded-full">
+              {thresholds.memory}% limit
+            </span>
+          </div>
           <p
-            className={`text-lg font-bold tabular-nums ${
-              resource.memoryUsage > 85 ? "text-amber-500" : ""
+            className={`text-base font-bold tabular-nums tracking-tight ${
+              isMemHigh ? "text-amber-500" : "text-foreground"
             }`}
           >
             {resource.memoryUsage}
             <span className="text-xs font-normal text-muted-foreground">%</span>
           </p>
-          <Progress value={resource.memoryUsage} className="mt-1 h-1" />
+          <Progress
+            value={resource.memoryUsage}
+            className={`mt-1.5 h-1.5 rounded-full ${isMemHigh ? "[&>div]:bg-amber-500" : "[&>div]:bg-primary"}`}
+          />
+        </div>
+      </div>
+
+      {/* Metrics Row 2: Storage & Network Load Strip */}
+      <div className="grid grid-cols-2 gap-2 p-2.5 rounded-2xl bg-muted/20 dark:bg-zinc-950/30 border border-border/40 text-[11px]">
+        <div>
+          <span className="text-[9.5px] uppercase font-semibold tracking-wider text-muted-foreground block">
+            Storage Capacity
+          </span>
+          <p
+            className={`font-semibold tabular-nums mt-0.5 ${
+              isStorageHigh ? "text-rose-500" : "text-foreground"
+            }`}
+          >
+            {resource.storageUsage ?? 35}%
+            <span className="text-[10px] text-muted-foreground font-normal ml-1">
+              used
+            </span>
+          </p>
+        </div>
+
+        <div>
+          <span className="text-[9.5px] uppercase font-semibold tracking-wider text-muted-foreground block">
+            Throughput & Load
+          </span>
+          <p className="font-semibold tabular-nums text-foreground truncate mt-0.5">
+            {resource.networkTraffic ?? 10} MB/s
+            <span className="text-[10px] text-muted-foreground font-normal ml-1">
+              · {resource.requestCount ?? 120} req/s
+            </span>
+          </p>
         </div>
       </div>
     </button>
   );
 }
 
-// ── Resource Grid ───────────────────────────────────────────────────────────
+// ── Resource Grid Main Component ────────────────────────────────────────────
 
 export function ResourceGrid() {
-  const { resources, resourcesLoading } = useDashboard();
+  const { resources, resourcesLoading, viewMode, setViewMode } = useDashboard();
 
   if (resourcesLoading) {
     return (
@@ -327,12 +398,48 @@ export function ResourceGrid() {
   }
 
   return (
-    <div>
-      <div className="mb-3 flex items-center justify-between">
-        <h2 className="text-sm font-semibold text-muted-foreground">
-          All Resources
-          <span className="ml-2 text-xs font-normal">({resources.length})</span>
-        </h2>
+    <div className="space-y-3">
+      {/* View Switcher and Add Resource Bar */}
+      <div className="flex items-center justify-between gap-2">
+        <div className="flex items-center gap-2">
+          <h2 className="text-sm font-semibold text-foreground">
+            Monitored Cloud Resources
+            <span className="ml-2 text-xs font-normal text-muted-foreground">
+              ({resources.length})
+            </span>
+          </h2>
+
+          {/* View Mode Toggle: Grid vs Table */}
+          <div className="flex items-center rounded-lg border border-border/60 bg-muted/30 p-0.5">
+            <button
+              type="button"
+              onClick={() => setViewMode("grid")}
+              className={`flex items-center gap-1 rounded-md px-2 py-1 text-xs font-medium transition-all ${
+                viewMode === "grid"
+                  ? "bg-background text-foreground shadow-xs font-semibold"
+                  : "text-muted-foreground hover:text-foreground"
+              }`}
+              title="Card Grid View"
+            >
+              <LayoutGrid className="h-3.5 w-3.5" />
+              <span className="hidden sm:inline">Grid</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => setViewMode("table")}
+              className={`flex items-center gap-1 rounded-md px-2 py-1 text-xs font-medium transition-all ${
+                viewMode === "table"
+                  ? "bg-background text-foreground shadow-xs font-semibold"
+                  : "text-muted-foreground hover:text-foreground"
+              }`}
+              title="Tabular Monitoring View"
+            >
+              <TableIcon className="h-3.5 w-3.5" />
+              <span className="hidden sm:inline">Table</span>
+            </button>
+          </div>
+        </div>
+
         <AddResourceDialog />
       </div>
 
@@ -340,14 +447,14 @@ export function ResourceGrid() {
         <Card>
           <CardContent className="py-12 text-center">
             <Server className="mx-auto h-10 w-10 text-muted-foreground/20" />
-            <p className="mt-2 text-sm text-muted-foreground">
-              No resources yet
-            </p>
+            <p className="mt-2 text-sm text-muted-foreground">No cloud resources provisioned yet</p>
             <p className="text-xs text-muted-foreground/60">
-              Click &quot;Add Resource&quot; to create your first cloud resource
+              Click &quot;Add Resource&quot; to begin monitoring your cloud infrastructure
             </p>
           </CardContent>
         </Card>
+      ) : viewMode === "table" ? (
+        <ResourceTable />
       ) : (
         <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
           {resources.map((r) => (

@@ -25,6 +25,9 @@ export const DEMO_RESOURCES: Resource[] = [
     region: "ap-south-1",
     cpuUsage: 92,
     memoryUsage: 88,
+    storageUsage: 64,
+    networkTraffic: 42.5,
+    requestCount: 1420,
     hourlyRate: getHourlyRate("VM", "medium"), // ₹3.40/hr
     apiCredentials: generateFakeCredentials(),
     createdAt: hoursAgo(48).toISOString(),
@@ -39,6 +42,9 @@ export const DEMO_RESOURCES: Resource[] = [
     region: "ap-south-1",
     cpuUsage: 45,
     memoryUsage: 62,
+    storageUsage: 78,
+    networkTraffic: 18.2,
+    requestCount: 680,
     hourlyRate: getHourlyRate("Database", "medium"), // ₹6.00/hr
     apiCredentials: generateFakeCredentials(),
     createdAt: hoursAgo(72).toISOString(),
@@ -53,9 +59,46 @@ export const DEMO_RESOURCES: Resource[] = [
     region: "ap-south-1",
     cpuUsage: 22,
     memoryUsage: 35,
+    storageUsage: 12,
+    networkTraffic: 68.4,
+    requestCount: 2150,
     hourlyRate: getHourlyRate("Network", "small"), // ₹2.00/hr
     apiCredentials: generateFakeCredentials(),
     createdAt: hoursAgo(96).toISOString(),
+    lastUpdated: now.toISOString(),
+  },
+  {
+    id: "demo-res-storage-s3",
+    name: "assets-media-bucket",
+    type: "Storage",
+    size: "medium",
+    status: "running",
+    region: "ap-south-1",
+    cpuUsage: 15,
+    memoryUsage: 28,
+    storageUsage: 82,
+    networkTraffic: 34.0,
+    requestCount: 950,
+    hourlyRate: getHourlyRate("Storage", "medium"), // ₹1.50/hr
+    apiCredentials: generateFakeCredentials(),
+    createdAt: hoursAgo(110).toISOString(),
+    lastUpdated: now.toISOString(),
+  },
+  {
+    id: "demo-res-lambda-fn",
+    name: "image-resizer-worker",
+    type: "Serverless",
+    size: "small",
+    status: "running",
+    region: "ap-south-1",
+    cpuUsage: 38,
+    memoryUsage: 45,
+    storageUsage: 10,
+    networkTraffic: 8.5,
+    requestCount: 420,
+    hourlyRate: getHourlyRate("Serverless", "small"), // ₹0.30/hr
+    apiCredentials: generateFakeCredentials(),
+    createdAt: hoursAgo(60).toISOString(),
     lastUpdated: now.toISOString(),
   },
   {
@@ -67,6 +110,9 @@ export const DEMO_RESOURCES: Resource[] = [
     region: "ap-south-1",
     cpuUsage: 0,
     memoryUsage: 0,
+    storageUsage: 40,
+    networkTraffic: 0,
+    requestCount: 0,
     hourlyRate: getHourlyRate("VM", "small"), // ₹0.85/hr
     apiCredentials: generateFakeCredentials(),
     createdAt: hoursAgo(120).toISOString(),
@@ -81,6 +127,9 @@ export const DEMO_RESOURCES: Resource[] = [
     region: "ap-south-1",
     cpuUsage: 28,
     memoryUsage: 41,
+    storageUsage: 30,
+    networkTraffic: 14.8,
+    requestCount: 890,
     hourlyRate: getHourlyRate("Database", "small"), // ₹1.50/hr
     apiCredentials: generateFakeCredentials(),
     createdAt: hoursAgo(36).toISOString(),
@@ -122,7 +171,29 @@ export const DEMO_USAGE_RECORDS: UsageRecord[] = [
     startedAt: hoursAgo(96).toISOString(),
     endedAt: null,
   },
-  // 4. Stopped worker VM (ran for 6 hours, then stopped)
+  // 4. Currently running Storage bucket (medium, started 110h ago)
+  {
+    id: "demo-usage-storage",
+    resourceId: "demo-res-storage-s3",
+    resourceName: "assets-media-bucket",
+    type: "Storage",
+    size: "medium",
+    hourlyRate: 1.50,
+    startedAt: hoursAgo(110).toISOString(),
+    endedAt: null,
+  },
+  // 5. Currently running Serverless Function (small, started 60h ago)
+  {
+    id: "demo-usage-serverless",
+    resourceId: "demo-res-lambda-fn",
+    resourceName: "image-resizer-worker",
+    type: "Serverless",
+    size: "small",
+    hourlyRate: 0.30,
+    startedAt: hoursAgo(60).toISOString(),
+    endedAt: null,
+  },
+  // 6. Stopped worker VM (ran for 6 hours, then stopped)
   {
     id: "demo-usage-4",
     resourceId: "demo-res-vm-worker",
@@ -133,7 +204,7 @@ export const DEMO_USAGE_RECORDS: UsageRecord[] = [
     startedAt: hoursAgo(10).toISOString(),
     endedAt: hoursAgo(4).toISOString(),
   },
-  // 5. Currently running Redis cache (small, started 36h ago)
+  // 7. Currently running Redis cache (small, started 36h ago)
   {
     id: "demo-usage-5",
     resourceId: "demo-res-db-cache",
@@ -144,8 +215,7 @@ export const DEMO_USAGE_RECORDS: UsageRecord[] = [
     startedAt: hoursAgo(36).toISOString(),
     endedAt: null,
   },
-  // 6. DELETED RESOURCE: VM that ran for 5.5 hours earlier this month, then was deleted!
-  // Demonstrates that charges are tracked per usage record and survive resource document deletion.
+  // 8. DELETED RESOURCE: VM that ran for 5.5 hours earlier this month, then was deleted
   {
     id: "demo-usage-deleted-vm",
     resourceId: "demo-deleted-etl-pipeline",
@@ -154,7 +224,7 @@ export const DEMO_USAGE_RECORDS: UsageRecord[] = [
     size: "large",
     hourlyRate: 8.00, // ₹8.00/hr
     startedAt: hoursAgo(16).toISOString(),
-    endedAt: hoursAgo(10.5).toISOString(), // ran for 5.5 hours = ₹44.00
+    endedAt: hoursAgo(10.5).toISOString(),
   },
 ];
 
@@ -185,17 +255,23 @@ export const DEMO_FILES: UserFile[] = [
 export const DEMO_ALERTS: Alert[] = [
   {
     id: "demo-alert-cpu-spike",
+    resourceId: "demo-res-vm-spike",
     resourceName: "prod-web-cluster-01",
     resourceType: "VM",
     metric: "CPU",
     value: 92,
+    threshold: 80,
+    unit: "%",
+    severity: "critical",
+    status: "active",
     time: now.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
+    timestampMs: now.getTime(),
     reason: "CPU sustained above 80% (92%) for 4 consecutive sample intervals",
   },
 ];
 
 /**
- * Generate 24 hours of realistic time-series telemetry points.
+ * Generate 24 hours of realistic multi-metric time-series telemetry points.
  */
 export function generateDemoTelemetry(): TimeSeriesPoint[] {
   const points: TimeSeriesPoint[] = [];
@@ -205,24 +281,49 @@ export function generateDemoTelemetry(): TimeSeriesPoint[] {
     const pointTime = new Date(now.getTime() - i * 60 * 60 * 1000);
     const timeStr = pointTime.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
 
-    // Simulate normal baseline around 35-50% CPU, with an anomaly spike in recent 3 hours
+    // Normal baseline around 35-50% CPU, with an anomaly spike in recent 3 hours
     let avgCpu = Math.round(38 + Math.sin(i / 2) * 12 + (Math.random() - 0.5) * 6);
     let peakCpu = Math.round(avgCpu + 15 + Math.random() * 8);
+
+    let avgMemory = Math.round(48 + Math.cos(i / 3) * 10 + (Math.random() - 0.5) * 4);
+    let peakMemory = Math.round(avgMemory + 14);
+
+    let avgStorage = Math.round(55 + (24 - i) * 0.4);
+    let peakStorage = Math.round(avgStorage + 8);
+
+    let avgNetwork = Number((14 + Math.sin(i / 2) * 6 + (Math.random() - 0.5) * 2).toFixed(1));
+    let peakNetwork = Number((avgNetwork + 12 + Math.random() * 5).toFixed(1));
+
+    let avgRequests = Math.round(320 + Math.sin(i / 2) * 140 + (Math.random() - 0.5) * 40);
+    let peakRequests = Math.round(avgRequests + 250);
 
     if (i <= 2) {
       // Recent spike
       avgCpu = 84 + (2 - i) * 3;
       peakCpu = 94 + (2 - i) * 2;
+      avgMemory = 82 + (2 - i) * 2;
+      peakMemory = 89 + (2 - i) * 2;
+      avgNetwork = Number((48 + (2 - i) * 6).toFixed(1));
+      peakNetwork = Number((68 + (2 - i) * 8).toFixed(1));
+      avgRequests = 1350 + (2 - i) * 180;
+      peakRequests = 1850 + (2 - i) * 220;
     }
 
     points.push({
       time: timeStr,
       avgCpu: Math.min(100, Math.max(10, avgCpu)),
       peakCpu: Math.min(100, Math.max(20, peakCpu)),
-      anomaly: avgCpu > 80 || peakCpu > 80,
+      avgMemory: Math.min(100, Math.max(15, avgMemory)),
+      peakMemory: Math.min(100, Math.max(25, peakMemory)),
+      avgStorage: Math.min(100, Math.max(10, avgStorage)),
+      peakStorage: Math.min(100, Math.max(20, peakStorage)),
+      avgNetwork: Math.max(0.5, avgNetwork),
+      peakNetwork: Math.max(1.0, peakNetwork),
+      avgRequests: Math.max(10, avgRequests),
+      peakRequests: Math.max(20, peakRequests),
+      anomaly: avgCpu > 80 || peakCpu > 80 || avgNetwork > 60 || avgRequests > 1200,
     });
   }
 
   return points;
 }
-

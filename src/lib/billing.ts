@@ -137,6 +137,8 @@ export function calculateMonthlyBill(
     VM: 0,
     Database: 0,
     Network: 0,
+    Storage: 0,
+    Serverless: 0,
   };
 
   let computeCostRaw = 0;

@@ -10,7 +10,7 @@ const inter = Inter({
 });
 
 export const metadata: Metadata = {
-  title: "Cloud Resource Monitor — Infrastructure Dashboard",
+  title: "CloudMonitor — Real-time Infrastructure & Telemetry Dashboard",
   description:
     "Real-time monitoring dashboard for cloud infrastructure resources including VMs, databases, storage, and network services. Firebase-backed with per-user data isolation.",
   icons: {

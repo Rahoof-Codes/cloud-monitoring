@@ -74,7 +74,7 @@ flowchart TB
         FileHook["useFiles()"]
         SimLoop["5s Telemetry Simulation Loop"]
         IDB["Browser IndexedDB (Blobs <= 200MB)"]
-        AIWidget["Ask AI Streaming Widget"]
+        AICopilot["AI Copilot Studio (/dashboard/ai) & Drawer Widget"]
     end
 
     subgraph Server["Next.js Server Tier"]
@@ -473,3 +473,103 @@ Open [http://localhost:3000](http://localhost:3000) in your browser.
    - Click the floating **Ask AI** button in the bottom right.
    - Click the quick prompt **"Audit Anomalies"** or ask: *"What is my current monthly bill and what should I do about high CPU?"*
    - Showcase the fluid typewriter streaming, Markdown formatting, live telemetry citation, and instant actionable recommendations.
+
+---
+
+## 14. Monitored Resources, Metric Definitions & Threshold Alert Configuration
+
+### 14.1 Monitored Cloud Resources
+
+| Resource Type | Provider Mapping | Monitored Telemetry | On-Demand Rate (ap-south-1) |
+| :--- | :--- | :--- | :--- |
+| **VM (Compute)** | AWS EC2 / GCP Compute Engine | CPU Utilization, Memory, Disk IOPS | ₹0.85/hr (Small), ₹3.40/hr (Medium), ₹8.00/hr (Large) |
+| **Database** | Amazon RDS / Managed PostgreSQL / Redis | Query Load, Memory Buffer, Connections | ₹1.50/hr (Small), ₹6.00/hr (Medium), ₹12.00/hr (Large) |
+| **Network** | Application Load Balancer / Ingress ALB | Bandwidth Throughput (MB/s), Request Rate | ₹2.00/hr (Standard ALB / L4 / CDN) |
+| **Storage Service** | AWS S3 Bucket / GCS Object Pool | Storage Capacity (%), Object Count, Egress | ₹0.50/hr (Standard), ₹1.50/hr (SSD), ₹3.50/hr (Multi-Region) |
+| **Serverless** | AWS Lambda / Cloud Functions | Invocations/sec, Execution Duration, Concurrency | ₹0.30/hr (Micro), ₹1.00/hr (Standard), ₹2.50/hr (Container) |
+
+### 14.2 Metric Definitions & Formulas
+
+1. **CPU Utilization (%)**:
+   $$\text{CPU Usage} = \frac{\text{Active vCPU Execution Cycles}}{\text{Total Available Clock Cycles}} \times 100$$
+   Sampled continuously every 5 seconds. Triggers Warning at $>80\%$ and Critical at $\ge 90\%$.
+
+2. **Memory Utilization (%)**:
+   $$\text{RAM Consumption} = \frac{\text{Allocated Physical RAM (MB)}}{\text{Total Provisioned RAM (MB)}} \times 100$$
+   Monitored to prevent out-of-memory kernel kills on container hosts and database instances.
+
+3. **Storage Capacity (%)**:
+   $$\text{Storage Usage} = \frac{\text{Used Disk / Partition Blocks}}{\text{Total Provisioned Volume Quota}} \times 100$$
+   Encompasses local compute block storage volumes as well as cloud-uploaded object storage files.
+
+4. **Network Bandwidth Throughput (MB/s)**:
+   $$\text{Network Bandwidth} = \frac{\text{Inbound Bytes} + \text{Outbound Bytes}}{\text{Sample Duration (Seconds)} \times 1024 \times 1024}$$
+   Measures ingress and egress data transfer velocity across virtual network interfaces.
+
+5. **Request Count Rate (req/s)**:
+   $$\text{Request Rate} = \frac{\Delta \text{HTTP(S) Ingress Requests}}{\Delta t \text{ (seconds)}}$$
+   Monitors application throughput and detects sudden denial-of-service or bot traffic surges.
+
+### 14.3 Usage Thresholds & Alert Configuration
+
+The alerting engine monitors telemetry against custom, user-configurable thresholds:
+- **CPU Threshold**: Default $80\%$ (configurable between $40\%$ and $95\%$).
+- **Memory Threshold**: Default $80\%$ (configurable between $40\%$ and $95\%$).
+- **Storage Threshold**: Default $85\%$ (configurable between $50\%$ and $98\%$).
+- **Network Threshold**: Default $60\text{ MB/s}$ (configurable between $20\text{ MB/s}$ and $150\text{ MB/s}$).
+- **Request Rate Threshold**: Default $1200\text{ req/s}$ (configurable between $400\text{ req/s}$ and $3000\text{ req/s}$).
+- **Anti-Flapping Window**: Requires $N$ consecutive samples (default: 2 consecutive samples) exceeding the threshold before an alert is dispatched, eliminating false positives caused by momentary spikes.
+- **Incident Lifecycle**: Supports alert acknowledgement (`ACK`) and resolution (`RESOLVED`) tracking.
+
+### 14.4 Cloud Platform Monitoring Service Configuration
+
+Users can connect to or simulate real cloud platforms:
+- **Amazon CloudWatch**: Direct integration with AWS Mumbai (`ap-south-1`) CloudWatch metrics and alarms.
+- **Google Cloud Monitoring**: Telemetry collection for GCP projects.
+- **Azure Monitor**: Virtual machine and application telemetry.
+- **Prometheus / OpenTelemetry**: Standard multi-cloud metric scraping.
+- **Configurable Frequencies**: 5s (Real-Time), 10s (Fast), 30s (Standard), 60s (Eco Mode), or Paused.
+
+### 14.5 Controlled Threshold Alert Demonstration Suite
+
+To demonstrate alerting mechanisms during presentations or tests, the dashboard provides a **Controlled Test Dialog**:
+1. **CPU Spike**: Injects $95\%$ CPU on an active instance; immediately triggers the threshold alert banner, fires a toast notification with an **Inspect** action, and adds red threshold breach markers on the time-series chart.
+2. **Network Bandwidth Surge**: Injects $88.5\text{ MB/s}$ to demonstrate ingress bandwidth alerting.
+3. **Storage Warning**: Injects $94\%$ volume utilization to demonstrate disk capacity exhaustion alerts.
+4. **Traffic Flood**: Injects $2450\text{ req/s}$ to simulate DDoS or high-concurrency alert escalation.
+5. **Restore Baseline**: Restores fleet metrics to healthy baseline ($35\%$ CPU, $12\text{ MB/s}$).
+
+### 14.6 Dual Display Modes: Grid & Tabular Monitoring View
+
+Users can toggle seamlessly between:
+- **Card Grid View**: Visual summary cards showcasing real-time progress bars, status dots, and live prices.
+- **Tabular Monitoring View**: Interactive, sortable, filterable table featuring live metric bars, region indicators, search by name/ID, and inline resource actions (Inspect, Start/Stop, Delete).
+
+---
+
+## 15. Cloud AI Copilot & IAM API Credentials Redesign
+
+### 15.1 Dedicated AI Copilot Studio (`/dashboard/ai`)
+The conversational AI engine has been expanded from a corner popover into a dedicated full-screen DevOps Intelligence Studio:
+- **Navigation Placement**: Prominently accessible via **AI Copilot** in the top navigation bar.
+- **Live Injected Context**: Streams real-time operational context (active alarms, abnormal resources, health scores, and FinOps monthly run-rate) directly into the model's system prompt.
+- **Pre-Engineered Diagnostic Runbooks**:
+  1. *Active Alarms Root-Cause Diagnosis*: Automated triage of active threshold violations with recommended remediation commands.
+  2. *FinOps Cost Optimization*: Granular breakdown of idle resources and right-sizing recommendations.
+  3. *IAM & API Key Health Check*: Cryptographic posture audit and key rotation planning.
+  4. *Capacity & Scaling Forecast*: Sizing recommendations across compute, memory, and disk tiers.
+- **Streaming & Export**: Real-time token streaming with syntax-highlighted code blocks, one-click copy, and Markdown session export.
+
+### 15.2 Fleet API Credentials & IAM Security (`/dashboard/resources` & Inspection Drawer)
+Resource credentials have been redesigned with enterprise-grade security posture controls:
+- **API Keys & IAM Tab**: A dedicated sub-view in the Resources page providing fleet-wide key visibility.
+- **KMS Cryptographic Status**: Highlights envelope encryption (`AES-256 GCM`) and 90-day rotation compliance.
+- **Fleet Key Inventory Table**:
+  - Masked / Revealable Access Key ID and Secret Access Key.
+  - IAM Permission Scopes (`telemetry:push`, `metrics:read`, `s3:read-write`, `compute:manage`).
+  - Regional Ingestion Endpoint URLs.
+  - One-click Key Rotation with instant cryptographic regeneration and toast feedback.
+- **Interactive SDK Quickstart Generator**: Generates executable, copy-pasteable snippets for **cURL**, **Python (boto3 / requests)**, **Node.js (AWS SDK v3)**, and `.env` format.
+- **Redesigned Resource Detail Sheet**: Overhauled API Credentials card with status badges, regional endpoint copy, and granular permission tags.
+
+

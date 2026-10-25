@@ -36,6 +36,8 @@ import {
   Server,
   Database,
   Wifi,
+  HardDrive,
+  Activity,
   MapPin,
   Cpu,
   MemoryStick,
@@ -77,6 +79,10 @@ function typeIcon(type: ResourceType) {
       return <Database className={cls} />;
     case "Network":
       return <Wifi className={cls} />;
+    case "Storage":
+      return <HardDrive className={cls} />;
+    case "Serverless":
+      return <Activity className={cls} />;
   }
 }
 
@@ -337,6 +343,40 @@ export function ResourceDetailSheet() {
                   </div>
                 )}
 
+                {/* 4 Key Cloud Metrics Overview */}
+                <div className="space-y-2">
+                  <span className="font-semibold text-muted-foreground flex items-center gap-1.5">
+                    <Activity className="h-3.5 w-3.5 text-primary" />
+                    Live Cloud Metrics Telemetry
+                  </span>
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                    <div className="rounded-lg border border-border/60 bg-muted/20 p-2 text-center">
+                      <span className="text-[10px] text-muted-foreground block">CPU Load</span>
+                      <span className="font-bold text-sm text-foreground tabular-nums">
+                        {r.cpuUsage}%
+                      </span>
+                    </div>
+                    <div className="rounded-lg border border-border/60 bg-muted/20 p-2 text-center">
+                      <span className="text-[10px] text-muted-foreground block">Memory</span>
+                      <span className="font-bold text-sm text-foreground tabular-nums">
+                        {r.memoryUsage}%
+                      </span>
+                    </div>
+                    <div className="rounded-lg border border-border/60 bg-muted/20 p-2 text-center">
+                      <span className="text-[10px] text-muted-foreground block">Storage</span>
+                      <span className="font-bold text-sm text-foreground tabular-nums">
+                        {r.storageUsage ?? 35}%
+                      </span>
+                    </div>
+                    <div className="rounded-lg border border-border/60 bg-muted/20 p-2 text-center">
+                      <span className="text-[10px] text-muted-foreground block">Throughput</span>
+                      <span className="font-bold text-sm text-foreground tabular-nums truncate block">
+                        {r.networkTraffic ?? 10} MB/s
+                      </span>
+                    </div>
+                  </div>
+                </div>
+
                 {/* Resource CPU/Memory Telemetry Chart */}
                 <div className="space-y-2">
                   <div className="flex items-center justify-between">
@@ -402,12 +442,12 @@ export function ResourceDetailSheet() {
 
                 <Separator />
 
-                {/* API Credentials Section */}
-                <div className="space-y-3 rounded-xl border border-border/70 bg-card p-3.5 shadow-xs">
+                {/* API Credentials & IAM Security Section */}
+                <div className="space-y-3.5 rounded-xl border border-border/80 bg-gradient-to-b from-card to-muted/20 p-4 shadow-xs">
                   <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-1.5 font-semibold text-foreground">
+                    <div className="flex items-center gap-2 font-semibold text-foreground">
                       <Key className="h-4 w-4 text-amber-500" />
-                      <span>API Credentials</span>
+                      <span className="text-xs">API Credentials & IAM Security</span>
                     </div>
                     <Button
                       variant="ghost"
@@ -417,16 +457,26 @@ export function ResourceDetailSheet() {
                       className="h-7 gap-1 px-2 text-[11px] text-muted-foreground hover:text-foreground"
                     >
                       <RefreshCw className={`h-3 w-3 ${isRegenerating ? "animate-spin" : ""}`} />
-                      <span>Regenerate</span>
+                      <span>Rotate Key</span>
                     </Button>
+                  </div>
+
+                  {/* Status Banner */}
+                  <div className="flex items-center justify-between rounded-lg border border-border/50 bg-background/50 px-2.5 py-1.5 text-[11px]">
+                    <span className="text-muted-foreground">Encryption Status</span>
+                    <span className="inline-flex items-center gap-1 font-mono font-medium text-emerald-600 dark:text-emerald-400">
+                      <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
+                      AES-256 (Cloud KMS)
+                    </span>
                   </div>
 
                   {/* Access Key */}
                   <div className="space-y-1">
                     <div className="flex items-center justify-between text-[11px] text-muted-foreground">
-                      <span>Access Key</span>
+                      <span className="font-medium">Access Key ID</span>
                       <div className="flex items-center gap-1">
                         <button
+                          type="button"
                           onClick={() => setShowAccessKey(!showAccessKey)}
                           className="p-1 hover:text-foreground text-muted-foreground transition-colors"
                           title={showAccessKey ? "Mask" : "Reveal"}
@@ -434,15 +484,16 @@ export function ResourceDetailSheet() {
                           {showAccessKey ? <EyeOff className="h-3.5 w-3.5" /> : <Eye className="h-3.5 w-3.5" />}
                         </button>
                         <button
+                          type="button"
                           onClick={() => handleCopy(r.apiCredentials?.accessKey || "", "ak")}
                           className="p-1 hover:text-foreground text-muted-foreground transition-colors"
-                          title="Copy"
+                          title="Copy Access Key"
                         >
                           {copiedField === "ak" ? <Check className="h-3.5 w-3.5 text-emerald-500" /> : <Copy className="h-3.5 w-3.5" />}
                         </button>
                       </div>
                     </div>
-                    <p className="font-mono text-xs rounded-lg border border-border/50 bg-muted/30 px-2.5 py-1.5 select-all break-all">
+                    <p className="font-mono text-xs rounded-lg border border-border/50 bg-muted/40 px-2.5 py-1.5 select-all break-all text-foreground">
                       {showAccessKey ? r.apiCredentials?.accessKey : maskString(r.apiCredentials?.accessKey, 7)}
                     </p>
                   </div>
@@ -450,9 +501,10 @@ export function ResourceDetailSheet() {
                   {/* Secret Key */}
                   <div className="space-y-1">
                     <div className="flex items-center justify-between text-[11px] text-muted-foreground">
-                      <span>Secret Key</span>
+                      <span className="font-medium">Secret Access Key</span>
                       <div className="flex items-center gap-1">
                         <button
+                          type="button"
                           onClick={() => setShowSecretKey(!showSecretKey)}
                           className="p-1 hover:text-foreground text-muted-foreground transition-colors"
                           title={showSecretKey ? "Mask" : "Reveal"}
@@ -460,23 +512,61 @@ export function ResourceDetailSheet() {
                           {showSecretKey ? <EyeOff className="h-3.5 w-3.5" /> : <Eye className="h-3.5 w-3.5" />}
                         </button>
                         <button
+                          type="button"
                           onClick={() => handleCopy(r.apiCredentials?.secretKey || "", "sk")}
                           className="p-1 hover:text-foreground text-muted-foreground transition-colors"
-                          title="Copy"
+                          title="Copy Secret Key"
                         >
                           {copiedField === "sk" ? <Check className="h-3.5 w-3.5 text-emerald-500" /> : <Copy className="h-3.5 w-3.5" />}
                         </button>
                       </div>
                     </div>
-                    <p className="font-mono text-xs rounded-lg border border-border/50 bg-muted/30 px-2.5 py-1.5 select-all break-all">
+                    <p className="font-mono text-xs rounded-lg border border-border/50 bg-muted/40 px-2.5 py-1.5 select-all break-all text-foreground">
                       {showSecretKey ? r.apiCredentials?.secretKey : maskString(r.apiCredentials?.secretKey, 7)}
                     </p>
                   </div>
 
-                  {/* Sample notice */}
-                  <p className="text-[10px] text-muted-foreground/75 italic pt-0.5">
-                    Sample credentials — not valid for any real service.
-                  </p>
+                  {/* Regional Endpoint */}
+                  <div className="space-y-1">
+                    <div className="flex items-center justify-between text-[11px] text-muted-foreground">
+                      <span className="font-medium">Regional Ingestion Endpoint</span>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const ep = `https://${r.region}.cloudwatch.monitoring.io/v1/resources/${r.id}`;
+                          if (navigator.clipboard) {
+                            navigator.clipboard.writeText(ep);
+                            toast.success("Endpoint URL copied");
+                          }
+                        }}
+                        className="p-1 hover:text-foreground text-muted-foreground transition-colors"
+                        title="Copy Endpoint"
+                      >
+                        <Copy className="h-3.5 w-3.5" />
+                      </button>
+                    </div>
+                    <p className="font-mono text-[11px] rounded-lg border border-border/50 bg-muted/40 px-2.5 py-1.5 truncate text-muted-foreground">
+                      https://{r.region}.cloudwatch.monitoring.io/v1/resources/{r.id}
+                    </p>
+                  </div>
+
+                  {/* IAM Scopes */}
+                  <div className="space-y-1 pt-1">
+                    <span className="text-[11px] font-medium text-muted-foreground">IAM Permission Scopes</span>
+                    <div className="flex flex-wrap gap-1">
+                      <span className="rounded bg-blue-500/10 text-blue-600 dark:text-blue-400 border border-blue-500/20 px-1.5 py-0.5 text-[10px] font-mono">
+                        telemetry:push
+                      </span>
+                      <span className="rounded bg-purple-500/10 text-purple-600 dark:text-purple-400 border border-purple-500/20 px-1.5 py-0.5 text-[10px] font-mono">
+                        metrics:read
+                      </span>
+                      {r.type === "Storage" && (
+                        <span className="rounded bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 px-1.5 py-0.5 text-[10px] font-mono">
+                          s3:read-write
+                        </span>
+                      )}
+                    </div>
+                  </div>
                 </div>
 
                 <Separator />
