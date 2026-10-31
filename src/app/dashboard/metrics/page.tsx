@@ -25,7 +25,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 
 export default function MetricsPage() {
-  const { resources, thresholds, cpuSeries, setSelectedResource } = useDashboard();
+  const { resources, thresholds, cpuSeries, setSelectedResource, dataMode, connectedProviders } = useDashboard();
 
   const runningResources = resources.filter((r) => r.status === "running");
 
@@ -40,8 +40,17 @@ export default function MetricsPage() {
           <Badge variant="outline" className="text-xs">
             Multi-Metric Pipeline
           </Badge>
-          <Badge variant="secondary" className="text-xs bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20">
-            Simulated metrics
+          <Badge
+            variant="secondary"
+            className={`text-xs ${
+              dataMode === "real-with-creds"
+                ? "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 font-medium"
+                : "bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20"
+            }`}
+          >
+            {dataMode === "real-with-creds"
+              ? `Live Telemetry (${connectedProviders.map((p) => p.label || p.provider.toUpperCase()).join(", ") || "Active"})`
+              : "Simulated metrics (Demo)"}
           </Badge>
         </div>
         <p className="text-xs text-muted-foreground mt-0.5">

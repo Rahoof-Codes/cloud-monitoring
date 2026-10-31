@@ -5,6 +5,7 @@
 // ---------------------------------------------------------------------------
 
 import { useState } from "react";
+import Link from "next/link";
 import {
   Plus,
   Server,
@@ -14,6 +15,7 @@ import {
   Activity,
   LayoutGrid,
   Table as TableIcon,
+  Cloud,
 } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -373,7 +375,7 @@ function ResourceCard({ resource }: { resource: Resource }) {
 // ── Resource Grid Main Component ────────────────────────────────────────────
 
 export function ResourceGrid() {
-  const { resources, resourcesLoading, viewMode, setViewMode } = useDashboard();
+  const { resources, resourcesLoading, viewMode, setViewMode, isDemoMode } = useDashboard();
 
   if (resourcesLoading) {
     return (
@@ -440,7 +442,18 @@ export function ResourceGrid() {
           </div>
         </div>
 
-        <AddResourceDialog />
+        {isDemoMode ? (
+          <AddResourceDialog />
+        ) : (
+          <Link
+            href="/dashboard/integrations"
+            className="inline-flex h-7 items-center gap-1.5 rounded-lg border border-border/80 bg-muted/40 hover:bg-muted/70 px-2.5 text-xs font-medium text-foreground transition-colors"
+            title="Manage Connected Cloud Providers"
+          >
+            <Cloud className="h-3.5 w-3.5 text-blue-500" />
+            <span>Manage Integrations</span>
+          </Link>
+        )}
       </div>
 
       {resources.length === 0 ? (

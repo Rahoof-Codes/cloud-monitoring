@@ -3,11 +3,17 @@
 // ---------------------------------------------------------------------------
 // Dashboard Layout — Global Provider & CloudWatch Pro App Shell
 // ---------------------------------------------------------------------------
+// Uses the useAppMode hook to centralise demo/auth mode resolution.
+// Passes the resolved `dataMode` and `connectedProviders` down to
+// DashboardProvider, which decides whether to render the normal
+// dashboard, the empty-state onboarding screen, or (Phase 3) live data.
+// ---------------------------------------------------------------------------
 
-import { useState, useEffect } from "react";
+import { useEffect } from "react";
 import { useRouter } from "next/navigation";
 import type { User } from "firebase/auth";
 import { useAuth } from "@/lib/useAuth";
+import { useAppMode } from "@/lib/useAppMode";
 import { useResources } from "@/lib/useResources";
 import { useFiles } from "@/lib/useFiles";
 import {
@@ -45,30 +51,24 @@ export default function DashboardLayout({
 }) {
   const auth = useAuth();
   const router = useRouter();
-  const [isDemoMode, setIsDemoMode] = useState<boolean | null>(null);
 
-  // Check demo mode from storage
-  useEffect(() => {
-    const isDemo =
-      typeof window !== "undefined" &&
-      (localStorage.getItem("crm_demo_mode") === "true" ||
-        sessionStorage.getItem("crm_demo_mode") === "true");
-    setIsDemoMode(isDemo);
-  }, []);
+  // Centralised mode resolver — replaces the inline localStorage reads
+  const appMode = useAppMode(auth.user, auth.loading);
 
-  const effectiveUid = isDemoMode ? "demo-user" : auth.user?.uid;
+  const effectiveUid = appMode.isDemoMode ? "demo-user" : auth.user?.uid;
   const resourcesHook = useResources(effectiveUid);
   const filesHook = useFiles(effectiveUid);
 
   // Auth redirect only if NOT in demo mode and NOT authenticated
   useEffect(() => {
-    if (isDemoMode === null) return;
-    if (!isDemoMode && !auth.loading && !auth.user) {
+    // Wait for storage to hydrate before making redirect decisions
+    if (!appMode.isDemoMode && !auth.loading && !auth.user) {
       router.replace("/login");
     }
-  }, [auth.user, auth.loading, isDemoMode, router]);
+  }, [auth.user, auth.loading, appMode.isDemoMode, router]);
 
-  if (isDemoMode === null || (!isDemoMode && (auth.loading || !auth.user))) {
+  // Show loading spinner while auth or mode is hydrating
+  if (auth.loading || (!appMode.isDemoMode && !auth.user)) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-background">
         <div className="flex flex-col items-center gap-3">
@@ -79,13 +79,15 @@ export default function DashboardLayout({
     );
   }
 
-  const activeUser = isDemoMode ? DEMO_USER_STUB : auth.user!;
+  const activeUser = appMode.isDemoMode ? DEMO_USER_STUB : auth.user!;
 
   return (
     <DashboardProvider
       user={activeUser}
       auth={auth}
-      isDemoMode={Boolean(isDemoMode)}
+      isDemoMode={appMode.isDemoMode}
+      dataMode={appMode.dataMode}
+      connectedProviders={appMode.connectedProviders}
       resourcesHook={resourcesHook}
       filesHook={filesHook}
     >

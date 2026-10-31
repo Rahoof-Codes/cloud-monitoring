@@ -20,3 +20,9 @@ export { MobileSections } from "./mobile-sections";
 export { DemoBanner } from "./demo-banner";
 export { useDemoGuard } from "./demo-guard";
 export { ApiKeysTab } from "./api-keys-tab";
+export { CloudProviderEmptyState } from "./cloud-provider-empty-state";
+export { CloudErrorBanner } from "./cloud-error-banner";
+export type { CloudError } from "./cloud-error-banner";
+
+// Re-export types added in Phase 1 for external consumers
+export type { DataMode, ConnectedProvider } from "./dashboard-provider";

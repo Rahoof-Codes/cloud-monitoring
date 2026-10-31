@@ -32,7 +32,7 @@ import {
 import { toast } from "sonner";
 
 export default function SettingsPage() {
-  const { monitoringConfig, updateMonitoringConfig } = useDashboard();
+  const { monitoringConfig, updateMonitoringConfig, dataMode, connectedProviders } = useDashboard();
 
   // Local settings state
   const [provider, setProvider] = useState<CloudProvider>(monitoringConfig.provider);
@@ -137,8 +137,17 @@ export default function SettingsPage() {
                     Select the telemetry ingestion engine used to gather fleet metrics
                   </CardDescription>
                 </div>
-                <Badge variant="secondary" className="text-[10px] bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20">
-                  simulated integration
+                <Badge
+                  variant="secondary"
+                  className={`text-[10px] ${
+                    dataMode === "real-with-creds"
+                      ? "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 font-medium"
+                      : "bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20"
+                  }`}
+                >
+                  {dataMode === "real-with-creds"
+                    ? `Active (${connectedProviders.map((p) => p.label || p.provider.toUpperCase()).join(", ") || "Cloud Connected"})`
+                    : "simulated integration"}
                 </Badge>
               </div>
             </CardHeader>
@@ -345,7 +354,9 @@ export default function SettingsPage() {
                 Provider Connection
               </CardTitle>
               <CardDescription className="text-xs">
-                Simulated API credentials and regional endpoint
+                {dataMode === "real-with-creds"
+                  ? "Live cloud credentials and regional endpoint"
+                  : "API credentials and regional endpoint"}
               </CardDescription>
             </CardHeader>
             <CardContent className="pt-4 space-y-3.5 text-xs">

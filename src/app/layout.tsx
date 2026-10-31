@@ -25,7 +25,23 @@ export const metadata: Metadata = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en" className={`${inter.variable} h-full antialiased`} suppressHydrationWarning>
+    <html lang="en" className={`${inter.variable} dark h-full antialiased`} suppressHydrationWarning>
+      <head>
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `
+              try {
+                const t = localStorage.getItem("crm_theme");
+                if (t === "light") {
+                  document.documentElement.classList.remove("dark");
+                } else {
+                  document.documentElement.classList.add("dark");
+                }
+              } catch (_) {}
+            `,
+          }}
+        />
+      </head>
       <body className="min-h-full bg-background font-sans text-foreground">
         <TooltipProvider>
           {children}

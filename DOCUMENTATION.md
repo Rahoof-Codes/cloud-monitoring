@@ -23,6 +23,7 @@
 14. [Monitored Resources, Metric Definitions & Threshold Alert Configuration](#14-monitored-resources-metric-definitions--threshold-alert-configuration)
 15. [Cloud AI Copilot & IAM API Credentials Redesign](#15-cloud-ai-copilot--iam-api-credentials-redesign)
 16. [Limitations & Simulation Details](#16-limitations--simulation-details)
+17. [Dual-Mode Data Architecture & Zero-Trust Cloud Credential Vault](#17-dual-mode-data-architecture--zero-trust-cloud-credential-vault)
 
 ---
 
@@ -592,5 +593,47 @@ Resource credentials have been redesigned with enterprise-grade security posture
 - **Simulated Metrics**: The real-time telemetry updates for compute instances (CPU utilization, memory allocation, network traffic, storage capacity, and request rates) are generated using a client-side synthetic drift engine with realistic jitter. This enables complete demonstration of alerting, threshold detection, and AI diagnostics without requiring live AWS/GCP cloud provider credentials.
 - **Simulated Provider Integrations**: The provider selector (AWS CloudWatch, Google Cloud Monitoring, Azure Monitor, Prometheus) demonstrates architectural interchangeability and telemetry ingestion config. In a production deployment, this is replaced by server-side CloudWatch SDK clients (`@aws-sdk/client-cloudwatch`) fetching `GetMetricData`.
 - **Sample API Credentials**: The Access Key IDs and Secret Access Keys displayed under the API Keys tab and Resource Detail Sheet are simulated sample credentials formatted to illustrate KMS security posture and SDK automation snippets. They are not active keys on any real cloud provider.
+
+---
+
+## 17. Dual-Mode Data Architecture & Zero-Trust Cloud Credential Vault
+
+### 17.1 Dual-Mode Operation Overview
+
+Cloud Resource Monitor operates on a **Dual-Mode Data Architecture** that seamlessly bridges simulated hackathon demonstrations with production hyperscaler environments:
+
+| Mode | Trigger Condition | Data Ingestion Source | Behavior |
+| :--- | :--- | :--- | :--- |
+| **Demo Mode** | User clicks "Try Demo" (`crm_demo_mode = true`) | Simulated generator (`demoData.ts`) + client-side synthetic drift | Instant evaluation without cloud bills or configuration; stress-testable |
+| **Real Mode (No Creds)** | Authenticated user (`user != null`), 0 providers connected | Empty-state onboarding (`<CloudProviderEmptyState />`) | Prompts user to connect AWS, GCP, or Azure via the Credential Vault |
+| **Real Mode (With Creds)** | Authenticated user (`user != null`), ≥1 provider connected | Live cloud SDK endpoints (`/api/cloud/*`) with normalized telemetry | Fetches live compute instances, CloudWatch/Monitor metrics, and billing |
+
+### 17.2 Zero-Trust Credential Vault (`/dashboard/integrations`)
+
+The credential management engine enforces strict zero-trust standards:
+- **AES-256-GCM Cryptographic Security**: Credentials are encrypted on the server using an authenticated 256-bit symmetric cipher (`aes-256-gcm`) with unique 96-bit initialization vectors (IV) and authentication tags.
+- **Key Isolation**: The encryption key is derived server-side from `CREDENTIAL_ENCRYPTION_KEY` in `.env.local` and is never exposed to the client bundle.
+- **Zero Browser Storage Leakage**: API secrets and private keys are never written to `localStorage`, `sessionStorage`, or client-side cookies.
+- **Database Partitioning**: Encrypted payloads are stored in Firestore under `/users/{uid}/cloudCredentials/{provider}` protected by Firestore security rules.
+- **Live Connection Testing**: Before saving, users can trigger `/api/vault/test` to validate IAM syntax, STS identity, and permissions.
+
+### 17.3 Multi-Cloud Normalization Layer (`src/lib/server/normalizers/`)
+
+The backend normalizers convert heterogeneous cloud SDK responses into identical canonical TypeScript schemas:
+- **AWS (`aws.ts`)**:
+  - EC2 `DescribeInstancesCommand` &rarr; `Resource[]` (`id`, `name`, `type: "VM"`, `size`, `status`, `hourlyRate`, `cpuUsage`)
+  - CloudWatch `GetMetricDataCommand` &rarr; `TimeSeriesPoint[]` (aggregated 24h CPU, memory, network, requests)
+  - Cost Explorer `GetCostAndUsageCommand` &rarr; `UsageRecord[]`
+- **GCP (`gcp.ts`)**:
+  - Compute Engine `InstancesClient.list` &rarr; `Resource[]`
+  - Cloud Monitoring `MetricServiceClient.listTimeSeries` &rarr; `TimeSeriesPoint[]`
+- **Azure (`azure.ts`)**:
+  - ARM Compute `ComputeManagementClient.virtualMachines` &rarr; `Resource[]`
+  - Azure Monitor `MetricsQueryClient` &rarr; `TimeSeriesPoint[]`
+
+### 17.4 High-Performance Caching & Fault Tolerance
+- **In-Memory Server Cache (`cache.ts`)**: Implements an in-process LRU-style cache with a 60-second TTL for metrics and resources, and a 300-second TTL for billing queries to prevent hyperscaler rate limiting and unexpected API charges.
+- **Non-Blocking Error Resilience (`<CloudErrorBanner />`)**: If an IAM permission is missing (e.g. `ec2:DescribeInstances` unauthorized), the dashboard does not crash; instead, an unobtrusive banner explains the exact permission issue with a direct link to reconfigure the vault.
+
 
 

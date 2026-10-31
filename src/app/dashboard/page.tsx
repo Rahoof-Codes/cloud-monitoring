@@ -42,6 +42,9 @@ export default function DashboardHomePage() {
     refreshCountdown,
     isRefreshing,
     setSelectedResource,
+    dataMode,
+    connectedProviders,
+    isDemoMode,
   } = useDashboard();
 
   // Metrics calculation
@@ -129,8 +132,17 @@ export default function DashboardHomePage() {
             <h1 className="text-2xl font-bold tracking-tight text-foreground">
               Overall Summary
             </h1>
-            <Badge variant="secondary" className="text-xs bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20">
-              Simulated metrics
+            <Badge
+              variant="secondary"
+              className={`text-xs ${
+                dataMode === "real-with-creds"
+                  ? "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 font-medium"
+                  : "bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20"
+              }`}
+            >
+              {dataMode === "real-with-creds"
+                ? `Live Cloud Telemetry (${connectedProviders.map((p) => p.label || p.provider.toUpperCase()).join(", ") || "Active"})`
+                : "Simulated metrics (Demo)"}
             </Badge>
           </div>
           <p className="text-xs text-muted-foreground mt-0.5">

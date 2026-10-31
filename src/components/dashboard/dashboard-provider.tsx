@@ -13,11 +13,13 @@ import {
   useRef,
   ReactNode,
 } from "react";
+import { usePathname } from "next/navigation";
 import type { User } from "firebase/auth";
 import type { AuthState } from "@/lib/useAuth";
 import type { Resource, ResourceType, ResourceStatus, ResourceSize } from "@/lib/useResources";
 import type { UserFile } from "@/lib/useFiles";
 import type { UsageRecord } from "@/lib/billing";
+import type { DataMode, ConnectedProvider } from "@/lib/useAppMode";
 import {
   TimeSeriesPoint,
   DistributionSlice,
@@ -41,6 +43,9 @@ import {
 } from "@/lib/demoData";
 import { generateFakeCredentials } from "@/lib/credentials";
 import { DemoGuardProvider, useDemoGuard } from "./demo-guard";
+import { CloudProviderEmptyState } from "./cloud-provider-empty-state";
+import { CloudErrorBanner } from "./cloud-error-banner";
+import { useCloudData } from "@/lib/useCloudData";
 import { toast } from "sonner";
 import { doc, updateDoc, serverTimestamp } from "firebase/firestore";
 import { db } from "@/lib/firebase";
@@ -48,6 +53,7 @@ import { db } from "@/lib/firebase";
 export type { Resource, ResourceType, ResourceStatus, ResourceSize } from "@/lib/useResources";
 export type { UserFile } from "@/lib/useFiles";
 export type { UsageRecord } from "@/lib/billing";
+export type { DataMode, ConnectedProvider } from "@/lib/useAppMode";
 export type { ThresholdConfig, MonitoringConfig, CloudProvider, Alert, TimeSeriesPoint } from "@/lib/data";
 
 interface DashboardState {
@@ -55,6 +61,15 @@ interface DashboardState {
   user: User;
   auth: AuthState;
   isDemoMode: boolean;
+  /**
+   * Three-state resolved mode that drives which data source the dashboard uses:
+   *  - "demo"            → demo datasets (Try Demo)
+   *  - "real-no-creds"   → empty-state onboarding screen
+   *  - "real-with-creds" → live cloud SDK API routes
+   */
+  dataMode: DataMode;
+  /** List of cloud providers the user has connected (name + metadata only, no key material) */
+  connectedProviders: ConnectedProvider[];
   requireAuth: (action?: () => void | Promise<void>) => boolean;
 
   // Resources
@@ -141,6 +156,8 @@ interface DashboardProviderProps {
   user: User;
   auth: AuthState;
   isDemoMode?: boolean;
+  dataMode?: DataMode;
+  connectedProviders?: ConnectedProvider[];
   resourcesHook: ReturnType<typeof import("@/lib/useResources").useResources>;
   filesHook: ReturnType<typeof import("@/lib/useFiles").useFiles>;
 }
@@ -152,6 +169,8 @@ function DashboardInternalProvider({
   user,
   auth,
   isDemoMode = false,
+  dataMode = "demo",
+  connectedProviders = [],
   resourcesHook,
   filesHook,
 }: DashboardProviderProps) {
@@ -267,9 +286,38 @@ function DashboardInternalProvider({
 
   const metricHistoryRef = useRef<MetricHistory>(new Map());
 
-  // Active resources based on mode
-  const activeResources = isDemoMode ? demoResources : resourcesHook.resources;
-  const activeUsageRecords = isDemoMode ? demoUsageRecords : resourcesHook.usageRecords;
+  // Live Cloud Data Hook for authenticated users with connected credentials
+  const cloudData = useCloudData({
+    user: isDemoMode ? null : user,
+    enabled: dataMode === "real-with-creds",
+    intervalSeconds: monitoringConfig.intervalSeconds,
+  });
+
+  // Sync cloud metrics into cpuSeries when live series is returned
+  useEffect(() => {
+    if (dataMode === "real-with-creds" && cloudData.timeSeries.length > 0) {
+      setCpuSeries(cloudData.timeSeries);
+    }
+  }, [dataMode, cloudData.timeSeries]);
+
+  // Active resources based on mode:
+  // - "real-with-creds": STRICTLY use live cloud resources from connected providers (no fallback to mock)
+  // - "demo": use demoResources
+  // - fallback: resourcesHook.resources (empty or unauthenticated)
+  const activeResources =
+    dataMode === "real-with-creds"
+      ? cloudData.resources
+      : isDemoMode
+      ? demoResources
+      : resourcesHook.resources;
+
+  const activeUsageRecords =
+    dataMode === "real-with-creds"
+      ? cloudData.usageRecords
+      : isDemoMode
+      ? demoUsageRecords
+      : resourcesHook.usageRecords;
+
   const activeFiles = isDemoMode ? DEMO_FILES : filesHook.files;
   const activeTotalStorage = isDemoMode
     ? DEMO_FILES.reduce((sum, f) => sum + f.sizeBytes, 0)
@@ -408,6 +456,9 @@ function DashboardInternalProvider({
   // Manual Refresh
   const refreshMetrics = useCallback(() => {
     setIsRefreshing(true);
+    if (dataMode === "real-with-creds") {
+      cloudData.refresh();
+    }
     const point = buildSnapshotFromResources(activeResources, thresholds);
     if (point) {
       setCpuSeries((old) => {
@@ -422,14 +473,21 @@ function DashboardInternalProvider({
     setTimeout(() => {
       setIsRefreshing(false);
       toast.success(
-        `Metrics refreshed from ${monitoringConfig.provider} (ap-south-1)`
+        dataMode === "real-with-creds"
+          ? `Live cloud metrics synced from connected providers`
+          : `Metrics refreshed from ${monitoringConfig.provider} (ap-south-1)`
       );
     }, 400);
-  }, [activeResources, monitoringConfig, thresholds]);
+  }, [activeResources, monitoringConfig, thresholds, dataMode, cloudData]);
 
-  // Controlled Test / Live Demonstration
+  // Controlled Test / Live Demonstration (Only available in Demo Mode)
   const simulateStressTest = useCallback(
     async (type: "cpu" | "storage" | "network" | "requests" | "reset") => {
+      if (!isDemoMode) {
+        toast.info("Simulated stress tests are only available in Demo Mode.");
+        return;
+      }
+
       const runningRes = activeResources.find((r) => r.status === "running") || activeResources[0];
       if (!runningRes) {
         toast.error("No running resource available for test simulation");
@@ -469,26 +527,15 @@ function DashboardInternalProvider({
           break;
       }
 
-      if (isDemoMode) {
-        setDemoResources((prev) =>
-          prev.map((r) => (r.id === runningRes.id ? { ...r, ...patch } : r))
-        );
-      } else if (user?.uid) {
-        try {
-          await updateDoc(doc(db, "users", user.uid, "resources", runningRes.id), {
-            ...patch,
-            lastUpdated: serverTimestamp(),
-          });
-        } catch (err) {
-          console.error("Stress test update error:", err);
-        }
-      }
+      setDemoResources((prev) =>
+        prev.map((r) => (r.id === runningRes.id ? { ...r, ...patch } : r))
+      );
 
       // Immediately build snapshot & notify
       refreshMetrics();
       toast.info(message);
     },
-    [activeResources, isDemoMode, user?.uid, thresholds, refreshMetrics]
+    [activeResources, isDemoMode, thresholds, refreshMetrics]
   );
 
   // Guarded actions
@@ -500,6 +547,11 @@ function DashboardInternalProvider({
       region: string;
       status?: ResourceStatus;
     }) => {
+      if (dataMode === "real-with-creds") {
+        toast.info("In Real Mode, resources are synchronized automatically from your connected cloud provider.");
+        return;
+      }
+
       if (isDemoMode) {
         const size = data.size || "small";
         const newRes: Resource = {
@@ -526,7 +578,7 @@ function DashboardInternalProvider({
       if (!requireAuth()) return;
       await resourcesHook.addResource(data);
     },
-    [isDemoMode, requireAuth, resourcesHook]
+    [isDemoMode, dataMode, requireAuth, resourcesHook]
   );
 
   const handleToggleResourceStatus = useCallback(
@@ -618,7 +670,7 @@ function DashboardInternalProvider({
           r.status === "warning" ||
           r.status === "error"
       )
-    : getAbnormalResources(resourcesHook.resources, thresholds);
+    : getAbnormalResources(activeResources, thresholds);
 
   const distribution = getResourceDistribution(activeResources);
 
@@ -626,16 +678,47 @@ function DashboardInternalProvider({
     ? activeResources.find((r) => r.id === selectedResource.id) ?? null
     : null;
 
+  const pathname = usePathname();
+  const isAccessibleInNoCreds =
+    pathname?.startsWith("/dashboard/integrations") ||
+    pathname?.startsWith("/dashboard/settings") ||
+    pathname?.startsWith("/dashboard/help");
+
+  // When the user is authenticated but has not connected any cloud providers,
+  // render the empty-state onboarding screen on data-dependent dashboard pages.
+  const effectiveChildren =
+    dataMode === "real-no-creds" && !isAccessibleInNoCreds ? (
+      <CloudProviderEmptyState />
+    ) : (
+      <>
+        {dataMode === "real-with-creds" && cloudData.errors.length > 0 && (
+          <CloudErrorBanner
+            errors={cloudData.errors}
+            onDismiss={cloudData.dismissError}
+            onRetry={cloudData.refresh}
+          />
+        )}
+        {children}
+      </>
+    );
+
   return (
     <DashboardContext.Provider
       value={{
         user,
         auth,
         isDemoMode,
+        dataMode,
+        connectedProviders,
         requireAuth,
         resources: activeResources,
         abnormal,
-        resourcesLoading: isDemoMode ? false : resourcesHook.loading,
+        resourcesLoading:
+          isDemoMode
+            ? false
+            : dataMode === "real-with-creds"
+            ? cloudData.loading
+            : resourcesHook.loading,
         addResource: handleAddResource,
         toggleResourceStatus: handleToggleResourceStatus,
         deleteResource: handleDeleteResource,
@@ -648,7 +731,12 @@ function DashboardInternalProvider({
         monitoringConfig,
         updateMonitoringConfig,
         usageRecords: activeUsageRecords,
-        usageLoading: isDemoMode ? false : resourcesHook.usageLoading,
+        usageLoading:
+          isDemoMode
+            ? false
+            : dataMode === "real-with-creds"
+            ? cloudData.loading
+            : resourcesHook.usageLoading,
         alerts,
         acknowledgeAlert,
         resolveAlert,
@@ -675,7 +763,7 @@ function DashboardInternalProvider({
         clearPendingAiPrompt,
       }}
     >
-      {children}
+      {effectiveChildren}
     </DashboardContext.Provider>
   );
 }

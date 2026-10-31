@@ -25,7 +25,7 @@ import { Progress } from "@/components/ui/progress";
 import { toast } from "sonner";
 
 export default function ThresholdsPage() {
-  const { thresholds, updateThresholds, resetThresholds, resources } = useDashboard();
+  const { thresholds, updateThresholds, resetThresholds, resources, dataMode } = useDashboard();
 
   // Local state for interactive editing before save
   const [cpu, setCpu] = useState<number>(thresholds.cpu);
@@ -74,8 +74,15 @@ export default function ThresholdsPage() {
             <Badge variant="outline" className="text-xs">
               Rule Engine Active
             </Badge>
-            <Badge variant="secondary" className="text-xs bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20">
-              Simulated metrics
+            <Badge
+              variant="secondary"
+              className={`text-xs ${
+                dataMode === "real-with-creds"
+                  ? "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 font-medium"
+                  : "bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20"
+              }`}
+            >
+              {dataMode === "real-with-creds" ? "Live Cloud Rules" : "Simulated metrics (Demo)"}
             </Badge>
           </div>
           <p className="text-xs text-muted-foreground mt-0.5">

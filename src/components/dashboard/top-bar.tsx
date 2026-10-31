@@ -80,6 +80,7 @@ export function TopBar() {
       badge: activeAlertsCount > 0 ? activeAlertsCount : undefined,
     },
     { label: "History", href: "/dashboard/history", icon: HistoryIcon },
+    { label: "Integrations", href: "/dashboard/integrations", icon: Cloud },
     { label: "Settings", href: "/dashboard/settings", icon: Settings },
     { label: "Help", href: "/dashboard/help", icon: HelpCircle },
   ];
@@ -168,17 +169,19 @@ export function TopBar() {
 
           {/* Right Action Controls: Consolidated profile, live sync, alert simulation, theme toggle */}
           <div className="flex items-center gap-1.5 sm:gap-2.5">
-            {/* Quick Demo Test Action */}
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => setTestOpen(true)}
-              className="hidden xl:flex h-8 items-center gap-1.5 text-xs rounded-full border-rose-500/30 text-rose-500 dark:text-rose-400 bg-rose-500/10 hover:bg-rose-500/20"
-              title="Demonstrate Live Threshold Alerts"
-            >
-              <ShieldAlert className="h-3 w-3" />
-              <span>Simulate Alert</span>
-            </Button>
+            {/* Quick Demo Test Action — Only visible in Demo Mode */}
+            {isDemoMode && (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setTestOpen(true)}
+                className="hidden xl:flex h-8 items-center gap-1.5 text-xs rounded-full border-rose-500/30 text-rose-500 dark:text-rose-400 bg-rose-500/10 hover:bg-rose-500/20"
+                title="Demonstrate Live Threshold Alerts (Demo Mode)"
+              >
+                <ShieldAlert className="h-3 w-3" />
+                <span>Simulate Alert</span>
+              </Button>
+            )}
 
             {/* Refresh countdown pill */}
             <button

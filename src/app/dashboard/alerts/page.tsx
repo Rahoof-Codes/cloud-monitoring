@@ -32,6 +32,7 @@ export default function AlertsPage() {
     resolveAlert,
     simulateStressTest,
     openAiWithPrompt,
+    isDemoMode,
   } = useDashboard();
 
   const [activeTab, setActiveTab] = useState<"all" | "active" | "resolved">("active");
@@ -162,87 +163,89 @@ export default function AlertsPage() {
         </Card>
       </div>
 
-      {/* ── Controlled Test Demonstration Suite ── */}
-      <Card className="border-rose-500/30 bg-gradient-to-r from-rose-500/5 via-card to-amber-500/5 shadow-sm">
-        <CardHeader className="pb-3 border-b border-border/40">
-          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
-            <div>
-              <div className="flex items-center gap-2">
-                <div className="flex h-6 w-6 items-center justify-center rounded-md bg-rose-500/20 text-rose-500">
-                  <Zap className="h-3.5 w-3.5" />
+      {/* ── Controlled Test Demonstration Suite (Demo Mode Only) ── */}
+      {isDemoMode && (
+        <Card className="border-rose-500/30 bg-gradient-to-r from-rose-500/5 via-card to-amber-500/5 shadow-sm">
+          <CardHeader className="pb-3 border-b border-border/40">
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+              <div>
+                <div className="flex items-center gap-2">
+                  <div className="flex h-6 w-6 items-center justify-center rounded-md bg-rose-500/20 text-rose-500">
+                    <Zap className="h-3.5 w-3.5" />
+                  </div>
+                  <CardTitle className="text-sm font-semibold tracking-tight">
+                    Controlled Test Demonstration Suite
+                  </CardTitle>
                 </div>
-                <CardTitle className="text-sm font-semibold tracking-tight">
-                  Controlled Test Demonstration Suite
-                </CardTitle>
+                <CardDescription className="text-xs mt-0.5">
+                  Simulate synthetic load to demonstrate real-time threshold breaches, alert dispatching, and AI remediation.
+                </CardDescription>
               </div>
-              <CardDescription className="text-xs mt-0.5">
-                Simulate synthetic load to demonstrate real-time threshold breaches, alert dispatching, and AI remediation.
-              </CardDescription>
+              <Badge variant="outline" className="text-[10px] w-fit font-mono">
+                Demo Test Harness
+              </Badge>
             </div>
-            <Badge variant="outline" className="text-[10px] w-fit font-mono">
-              Demo Test Harness
-            </Badge>
-          </div>
-        </CardHeader>
-        <CardContent className="pt-4">
-          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-2.5">
-            <Button
-              variant="outline"
-              size="sm"
-              disabled={isSimulating}
-              onClick={() => handleTriggerTest("cpu", "CPU Spike (95%)")}
-              className="h-9 justify-start text-xs border-rose-500/40 text-rose-600 dark:text-rose-400 hover:bg-rose-500/10 gap-2"
-            >
-              <Zap className="h-3.5 w-3.5 shrink-0" />
-              <span>CPU Spike (95%)</span>
-            </Button>
+          </CardHeader>
+          <CardContent className="pt-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-2.5">
+              <Button
+                variant="outline"
+                size="sm"
+                disabled={isSimulating}
+                onClick={() => handleTriggerTest("cpu", "CPU Spike (95%)")}
+                className="h-9 justify-start text-xs border-rose-500/40 text-rose-600 dark:text-rose-400 hover:bg-rose-500/10 gap-2"
+              >
+                <Zap className="h-3.5 w-3.5 shrink-0" />
+                <span>CPU Spike (95%)</span>
+              </Button>
 
-            <Button
-              variant="outline"
-              size="sm"
-              disabled={isSimulating}
-              onClick={() => handleTriggerTest("storage", "Storage Warning (94%)")}
-              className="h-9 justify-start text-xs border-amber-500/40 text-amber-600 dark:text-amber-400 hover:bg-amber-500/10 gap-2"
-            >
-              <HardDrive className="h-3.5 w-3.5 shrink-0" />
-              <span>Storage Warning (94%)</span>
-            </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                disabled={isSimulating}
+                onClick={() => handleTriggerTest("storage", "Storage Warning (94%)")}
+                className="h-9 justify-start text-xs border-amber-500/40 text-amber-600 dark:text-amber-400 hover:bg-amber-500/10 gap-2"
+              >
+                <HardDrive className="h-3.5 w-3.5 shrink-0" />
+                <span>Storage Warning (94%)</span>
+              </Button>
 
-            <Button
-              variant="outline"
-              size="sm"
-              disabled={isSimulating}
-              onClick={() => handleTriggerTest("network", "Network Surge (88 MB/s)")}
-              className="h-9 justify-start text-xs border-sky-500/40 text-sky-600 dark:text-sky-400 hover:bg-sky-500/10 gap-2"
-            >
-              <Wifi className="h-3.5 w-3.5 shrink-0" />
-              <span>Network Surge (88 MB/s)</span>
-            </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                disabled={isSimulating}
+                onClick={() => handleTriggerTest("network", "Network Surge (88 MB/s)")}
+                className="h-9 justify-start text-xs border-sky-500/40 text-sky-600 dark:text-sky-400 hover:bg-sky-500/10 gap-2"
+              >
+                <Wifi className="h-3.5 w-3.5 shrink-0" />
+                <span>Network Surge (88 MB/s)</span>
+              </Button>
 
-            <Button
-              variant="outline"
-              size="sm"
-              disabled={isSimulating}
-              onClick={() => handleTriggerTest("requests", "Traffic Flood (2,450 req/s)")}
-              className="h-9 justify-start text-xs border-purple-500/40 text-purple-600 dark:text-purple-400 hover:bg-purple-500/10 gap-2"
-            >
-              <Activity className="h-3.5 w-3.5 shrink-0" />
-              <span>Traffic Flood (2.4k req/s)</span>
-            </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                disabled={isSimulating}
+                onClick={() => handleTriggerTest("requests", "Traffic Flood (2,450 req/s)")}
+                className="h-9 justify-start text-xs border-purple-500/40 text-purple-600 dark:text-purple-400 hover:bg-purple-500/10 gap-2"
+              >
+                <Activity className="h-3.5 w-3.5 shrink-0" />
+                <span>Traffic Flood (2.4k req/s)</span>
+              </Button>
 
-            <Button
-              variant="secondary"
-              size="sm"
-              disabled={isSimulating}
-              onClick={() => handleTriggerTest("reset", "Healthy Baseline")}
-              className="h-9 justify-start text-xs gap-2 font-medium"
-            >
-              <RotateCcw className="h-3.5 w-3.5 shrink-0 text-emerald-500" />
-              <span>Reset Healthy Baseline</span>
-            </Button>
-          </div>
-        </CardContent>
-      </Card>
+              <Button
+                variant="secondary"
+                size="sm"
+                disabled={isSimulating}
+                onClick={() => handleTriggerTest("reset", "Healthy Baseline")}
+                className="h-9 justify-start text-xs gap-2 font-medium"
+              >
+                <RotateCcw className="h-3.5 w-3.5 shrink-0 text-emerald-500" />
+                <span>Reset Healthy Baseline</span>
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       {/* ── Active Alarms & Incident Triage ── */}
       <Tabs
@@ -276,7 +279,9 @@ export default function AlertsPage() {
                 All Systems Nominal
               </h3>
               <p className="text-xs text-muted-foreground mt-1 max-w-sm">
-                No active threshold breach alarms detected. Use the Controlled Test suite above to trigger a test incident.
+                {isDemoMode
+                  ? "No active threshold breach alarms detected. Use the Controlled Test suite above to trigger a test incident."
+                  : "No active threshold breach alarms detected across your connected cloud infrastructure."}
               </p>
             </div>
           ) : (

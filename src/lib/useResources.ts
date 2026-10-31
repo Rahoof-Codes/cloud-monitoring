@@ -213,51 +213,6 @@ export function useResources(uid: string | undefined) {
     runMigration();
   }, [uid, resources, usageRecords, loading, usageLoading]);
 
-  // Simulation: nudge CPU/memory for running resources every 5s
-  useEffect(() => {
-    if (!uid || uid === "demo-user") return;
-
-    const interval = setInterval(async () => {
-      const current = resourcesRef.current;
-      for (const r of current) {
-        if (r.status === "stopped" || r.status === "error") continue;
-
-        const cpuDelta = (Math.random() - 0.5) * 8;
-        const memDelta = (Math.random() - 0.5) * 6;
-        const storageDelta = (Math.random() - 0.5) * 1.5;
-        const netDelta = (Math.random() - 0.5) * 3;
-        const reqDelta = (Math.random() - 0.5) * 25;
-
-        const cpuUsage = clamp(Math.round(r.cpuUsage + cpuDelta), 0, 100);
-        const memoryUsage = clamp(Math.round(r.memoryUsage + memDelta), 0, 100);
-        const storageUsage = clamp(Math.round((r.storageUsage ?? 40) + storageDelta), 5, 99);
-        const networkTraffic = Math.max(0.1, Number(((r.networkTraffic ?? 12) + netDelta).toFixed(1)));
-        const requestCount = Math.max(0, Math.round((r.requestCount ?? 140) + reqDelta));
-
-        let status: ResourceStatus = r.status;
-        if (cpuUsage > 90 || memoryUsage > 90 || storageUsage > 92) status = "warning";
-        else if (r.status === "warning" && cpuUsage < 85 && memoryUsage < 85 && storageUsage < 85) {
-          status = "running";
-        }
-
-        try {
-          await updateDoc(doc(db, "users", uid, "resources", r.id), {
-            cpuUsage,
-            memoryUsage,
-            storageUsage,
-            networkTraffic,
-            requestCount,
-            status,
-            lastUpdated: serverTimestamp(),
-          });
-        } catch {
-          // Silently ignore simulation write failures
-        }
-      }
-    }, 5000);
-
-    return () => clearInterval(interval);
-  }, [uid]);
 
   // CRUD Operations ───────────────────────────────────────────────────────────
 
